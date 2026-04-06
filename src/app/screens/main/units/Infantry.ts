@@ -1,7 +1,7 @@
 import { Assets } from "pixi.js";
 import { Unit, U } from "./Unit";
 
-const texture = await Assets.load('assets/main/soldier.png');
+const texture = await Assets.load("assets/main/soldier.png");
 
 export class Infantry extends Unit {
   constructor(x: number, y: number) {

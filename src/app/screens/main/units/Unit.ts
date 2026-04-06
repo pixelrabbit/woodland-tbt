@@ -13,7 +13,13 @@ export class Unit extends Container {
   private sprite: Sprite;
   private menu: Container;
 
-  constructor(type: U, x: number, y: number, moveRange: number = 3, texture?: Texture) {
+  constructor(
+    type: U,
+    x: number,
+    y: number,
+    moveRange: number = 3,
+    texture?: Texture,
+  ) {
     super();
     this.position.set(x, y);
 
@@ -40,7 +46,7 @@ export class Unit extends Container {
 
     const moveText = new Text({
       text: "Move",
-      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" }
+      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" },
     });
     moveText.position.set(8, 8);
     moveText.eventMode = "static";
@@ -55,7 +61,7 @@ export class Unit extends Container {
 
     const attackText = new Text({
       text: "Attack",
-      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" }
+      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" },
     });
     attackText.position.set(8, 32);
     attackText.eventMode = "static";
@@ -83,11 +89,12 @@ export class Unit extends Container {
   }
 }
 
-
-
-export function getPointsAtDistance(startX: number, startY: number, steps: number): { x: number, y: number }[] {
-
-  const points: { x: number, y: number }[] = [];
+export function getPointsAtDistance(
+  startX: number,
+  startY: number,
+  steps: number,
+): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [];
 
   for (let dx = -steps; dx <= steps; dx++) {
     for (let dy = -steps; dy <= steps; dy++) {

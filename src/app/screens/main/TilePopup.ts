@@ -49,11 +49,19 @@ export class TilePopup extends Container {
   public async show() {
     this.alpha = 0;
     this.scale.set(0.8);
-    animate(this, { alpha: 1, scale: 1 }, { duration: 0.3, easing: "ease-out" });
+    animate(
+      this,
+      { alpha: 1, scale: 1 },
+      { duration: 0.3, easing: "ease-out" },
+    );
   }
 
   /** Hide screen with animations */
   public async hide() {
-    await animate(this, { alpha: 0, scale: 0.8 }, { duration: 0.2, easing: "ease-in" });
+    await animate(
+      this,
+      { alpha: 0, scale: 0.8 },
+      { duration: 0.2, easing: "ease-in" },
+    );
   }
 }

@@ -2,7 +2,6 @@ import type { Ticker } from "pixi.js";
 import { Container } from "pixi.js";
 
 import { engine } from "../../getEngine";
-
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/commando";
@@ -114,12 +113,17 @@ export class MainScreen extends Container {
           const parentTile = selectedUnit.parent as Tile;
           // Clear previous highlights
           this.tiles.forEach((t) => (t.state = "default"));
-          const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
+          const possibleMoveCoordinates = getPointsAtDistance(
+            parentTile.gridX,
+            parentTile.gridY,
+            3,
+          );
           getTilesByCoordinates(
             Array.from(this.tiles.values()),
-            possibleMoveCoordinates).forEach((t) => {
-              t.state = "canMoveTo";
-            });
+            possibleMoveCoordinates,
+          ).forEach((t) => {
+            t.state = "canMoveTo";
+          });
         });
       }
     });

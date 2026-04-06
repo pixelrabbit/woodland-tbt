@@ -60,7 +60,7 @@ export class Tile extends Sprite {
           fontSize: 10,
           fill: 0xffffff,
           fontFamily: "Arial",
-        }
+        },
       });
       coordinatesText.anchor.set(1, 1);
       coordinatesText.position.set(Tile.TILE_SIZE - 2, Tile.TILE_SIZE - 2);
