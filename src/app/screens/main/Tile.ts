@@ -1,7 +1,5 @@
 import { Graphics, Sprite, Text, Assets } from "pixi.js";
 
-
-
 export enum TileType {
   P = "plain",
   C = "city",
@@ -10,12 +8,9 @@ export enum TileType {
 }
 
 // A cache for generated textures
-
-
-const textureGrass = await Assets.load('assets/main/grass.jpg');
-const textureWater = await Assets.load('assets/main/water.jpg');
-const textureMountain = await Assets.load('assets/main/mountain.png');
-
+const textureGrass = await Assets.load("assets/main/grass.jpg");
+const textureWater = await Assets.load("assets/main/water.jpg");
+const textureMountain = await Assets.load("assets/main/mountain.png");
 
 export class Tile extends Sprite {
   public readonly tileType: TileType;
@@ -28,7 +23,6 @@ export class Tile extends Sprite {
   private highlight: Graphics;
   sprite: Sprite;
 
-
   constructor(type: TileType, x: number, y: number) {
     super();
     // id
@@ -40,7 +34,6 @@ export class Tile extends Sprite {
     this.interactive = true;
     this.sortableChildren = true;
     this.cursor = "pointer";
-
 
     let texture;
     switch (type) {

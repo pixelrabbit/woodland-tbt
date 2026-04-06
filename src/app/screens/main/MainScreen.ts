@@ -113,11 +113,13 @@ export class MainScreen extends Container {
         unit.on("requestMove", (selectedUnit: Unit) => {
           const parentTile = selectedUnit.parent as Tile;
           // Clear previous highlights
-          this.tiles.forEach((t) => t.state = "default");
+          this.tiles.forEach((t) => (t.state = "default"));
           const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
-          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach(t => {
-            t.state = "canMoveTo";
-          });
+          getTilesByCoordinates(
+            Array.from(this.tiles.values()),
+            possibleMoveCoordinates).forEach((t) => {
+              t.state = "canMoveTo";
+            });
         });
       }
     });
