@@ -4,7 +4,11 @@ import { Container } from "pixi.js";
 import { engine } from "../../getEngine";
 
 import { Tile, TileType } from "./Tile";
-import { Unit, U } from "./Unit";
+import { Infantry } from "./units/Infantry";
+import { Commando } from "./units/commando";
+import { Unit, getPointsAtDistance } from "./units/Unit";
+import { getTilesByCoordinates } from "../../utils/coordinates";
+
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -13,7 +17,7 @@ export class MainScreen extends Container {
 
   public mainContainer: Container;
   private gridContainer: Container;
-  private tiles: Tile[] = [];
+  private tiles: Map<string, Tile> = new Map();
   private paused = false;
 
   constructor() {
@@ -70,7 +74,7 @@ export class MainScreen extends Container {
         tile.y = row * Tile.TILE_SIZE;
 
         this.gridContainer.addChild(tile);
-        this.tiles.push(tile);
+        this.tiles.set(tile.id, tile);
       }
     }
 
@@ -83,15 +87,42 @@ export class MainScreen extends Container {
 
   private placeUnits() {
     const unitsToPlace = [
-      { type: U.Infantry, col: 6, row: 6 },
-      { type: U.Commando, col: 7, row: 5 },
+      { type: Infantry, col: 6, row: 6 },
+      { type: Infantry, col: 7, row: 6 },
+      { type: Commando, col: 7, row: 5 },
     ];
 
     unitsToPlace.forEach(u => {
-      const x = u.col * Tile.TILE_SIZE + Tile.TILE_SIZE / 2;
-      const y = u.row * Tile.TILE_SIZE + Tile.TILE_SIZE / 2;
-      const unit = new Unit(u.type, x, y, Tile.TILE_SIZE);
-      this.gridContainer.addChild(unit);
+      const x = Tile.TILE_SIZE / 2;
+      const y = Tile.TILE_SIZE / 2;
+
+      let unit;
+      switch (u.type) {
+        case Commando:
+          unit = new Commando(x, y);
+          break;
+        case Infantry:
+        default:
+          unit = new Infantry(x, y);
+          break;
+      }
+
+      const tileId = `${u.col}_${u.row}`;
+      const tile = this.tiles.get(tileId);
+      if (tile) {
+        tile.addChild(unit);
+
+        unit.on("requestMove", (selectedUnit: Unit) => {
+          const parentTile = selectedUnit.parent as Tile;
+          // Clear previous highlights
+          this.tiles.forEach(t => t.state = "default");
+          const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
+          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach(t => {
+            t.state = "canMoveTo";
+          });
+        });
+      }
+
     });
   }
 
@@ -125,7 +156,7 @@ export class MainScreen extends Container {
   /** Fully reset */
   public reset() {
     this.gridContainer.removeChildren();
-    this.tiles = [];
+    this.tiles.clear();
     this.createGrid();
   }
 
