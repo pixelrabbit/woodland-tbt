@@ -1,4 +1,4 @@
-import { Graphics, Sprite, Text, Texture, Assets } from "pixi.js";
+import { Graphics, Sprite, Text, Assets } from "pixi.js";
 
 
 

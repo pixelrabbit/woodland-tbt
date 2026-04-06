@@ -9,7 +9,6 @@ import { Commando } from "./units/commando";
 import { Unit, getPointsAtDistance } from "./units/Unit";
 import { getTilesByCoordinates } from "../../utils/coordinates";
 
-
 /** The screen that holds the app */
 export class MainScreen extends Container {
   /** Assets bundles required by this screen */
@@ -34,7 +33,6 @@ export class MainScreen extends Container {
   }
 
   private createGrid() {
-
     const grid = [
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
@@ -92,7 +90,7 @@ export class MainScreen extends Container {
       { type: Commando, col: 7, row: 5 },
     ];
 
-    unitsToPlace.forEach(u => {
+    unitsToPlace.forEach((u) => {
       const x = Tile.TILE_SIZE / 2;
       const y = Tile.TILE_SIZE / 2;
 
@@ -115,19 +113,18 @@ export class MainScreen extends Container {
         unit.on("requestMove", (selectedUnit: Unit) => {
           const parentTile = selectedUnit.parent as Tile;
           // Clear previous highlights
-          this.tiles.forEach(t => t.state = "default");
+          this.tiles.forEach((t) => t.state = "default");
           const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
           getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach(t => {
             t.state = "canMoveTo";
           });
         });
       }
-
     });
   }
 
   /** Prepare the screen just before showing */
-  public prepare() { }
+  // public prepare() { }
 
   /** Update the screen */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -166,7 +163,7 @@ export class MainScreen extends Container {
   }
 
   /** Hide screen with animations */
-  public async hide() { }
+  // public async hide() { }
 
   /** Auto pause the app when window go out of focus */
   public blur() {
