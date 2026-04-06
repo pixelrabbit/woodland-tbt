@@ -53,7 +53,7 @@ export class Unit extends Container {
     moveText.cursor = "pointer";
     moveText.on("pointertap", (e) => {
       e.stopPropagation();
-      console.log(`Move action selected for ${type}`);
+      console.log(`Move action selected for ${type}`, moveRange);
       this.menu.visible = false;
 
       this.emit("requestMove", this);
@@ -76,7 +76,7 @@ export class Unit extends Container {
     this.menu.addChild(moveText, attackText);
   }
 
-  private toggleMenu(e: any) {
+  private toggleMenu(e: Event) {
     // Prevent click from propagating down to the map/grid
     e.stopPropagation();
     const stage = engine().navigation.container;
