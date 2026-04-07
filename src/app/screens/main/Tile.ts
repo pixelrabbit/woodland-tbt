@@ -79,6 +79,14 @@ export class Tile extends Sprite {
 
   public set state(value: string) {
     this._state = value;
-    this.highlight.visible = value === "canMoveTo";
+    if (value === "canMoveTo") {
+      this.highlight.tint = 0xffffff;
+      this.highlight.visible = true;
+    } else if (value === "hover") {
+      this.highlight.tint = 0xff0000;
+      this.highlight.visible = true;
+    } else {
+      this.highlight.visible = false;
+    }
   }
 }

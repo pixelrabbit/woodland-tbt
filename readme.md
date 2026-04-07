@@ -2,9 +2,7 @@
 
 ## ToDo
 
-- create grid system
-- create tile functionality
-  - move speed
-  - graphics
-  - popup for info
-  - mechanics for if city or base or homebase
+- movement
+  - cannot move through other units or building
+  - path should be highlight on drag
+  - after move, cannot move until next turn

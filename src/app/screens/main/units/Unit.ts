@@ -11,10 +11,12 @@ export enum U {
 
 export class Unit extends Container {
   private sprite: Sprite;
-  private menu: Container;
+  public readonly moveRange: number;
+  private isDragging: boolean = false;
 
   constructor(type: U, x: number, y: number, moveRange: number = 3, texture?: Texture) {
     super();
+    this.moveRange = moveRange;
     this.position.set(x, y);
 
     this.sprite = new Sprite(texture);
@@ -26,61 +28,30 @@ export class Unit extends Container {
     // Make unit interactive
     this.eventMode = "static";
     this.cursor = "pointer";
-    this.on("pointertap", this.toggleMenu, this);
 
-    // Setup the action menu
-    this.menu = new Container();
-    this.menu.visible = false;
-
-    const menuBg = new Graphics()
-      .rect(0, 0, 80, 60)
-      .fill({ color: 0x000000, alpha: 0.8 })
-      .stroke({ color: 0xffffff, width: 1 });
-    this.menu.addChild(menuBg);
-
-    const moveText = new Text({
-      text: "Move",
-      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" },
-    });
-    moveText.position.set(8, 8);
-    moveText.eventMode = "static";
-    moveText.cursor = "pointer";
-    moveText.on("pointertap", (e) => {
-      e.stopPropagation();
-      console.log(`Move action selected for ${type}`, moveRange);
-      this.menu.visible = false;
-
-      this.emit("requestMove", this);
-    });
-
-    const attackText = new Text({
-      text: "Attack",
-      style: { fontSize: 16, fill: 0xffffff, fontFamily: "Arial" },
-    });
-    attackText.position.set(8, 32);
-    attackText.eventMode = "static";
-    attackText.cursor = "pointer";
-    attackText.on("pointertap", (e) => {
-      e.stopPropagation();
-      console.log(`Attack action selected for ${type}`);
-      this.menu.visible = false;
-      this.emit("requestAttack", this);
-    });
-
-    this.menu.addChild(moveText, attackText);
+    this.on("pointerdown", this.onDragStart, this);
+    this.on("globalpointermove", this.onDragMove, this);
+    this.on("pointerup", this.onDragEnd, this);
+    this.on("pointerupoutside", this.onDragEnd, this);
   }
 
-  private toggleMenu(e: Event) {
-    // Prevent click from propagating down to the map/grid
-    e.stopPropagation();
-    const stage = engine().navigation.container;
-    if (stage) {
-      stage.addChild(this.menu);
-      const globalPos = this.getGlobalPosition();
-      this.menu.position.set(globalPos.x, globalPos.y);
+  private onDragStart = () => {
+    this.isDragging = true;
+    this.emit("dragStart", this);
+  };
+
+  private onDragMove = (e: any) => {
+    if (this.isDragging) {
+      this.emit("dragMove", this, e.global);
     }
-    this.menu.visible = !this.menu.visible;
-  }
+  };
+
+  private onDragEnd = (e: any) => {
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.emit("dragEnd", this, e.global);
+    }
+  };
 }
 
 export function getPointsAtDistance(startX: number, startY: number, steps: number): { x: number; y: number }[] {

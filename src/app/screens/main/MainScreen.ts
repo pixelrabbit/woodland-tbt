@@ -1,5 +1,6 @@
 import type { Ticker } from "pixi.js";
 import { Container } from "pixi.js";
+import { animate } from "motion";
 
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
@@ -17,6 +18,8 @@ export class MainScreen extends Container {
   private gridContainer: Container;
   private tiles: Map<string, Tile> = new Map();
   private paused = false;
+  private draggingUnit: Unit | null = null;
+  private hoveredTile: Tile | null = null;
 
   constructor() {
     super();
@@ -33,21 +36,18 @@ export class MainScreen extends Container {
 
   private createGrid() {
     const grid = [
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-      [0, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 2, 2, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
 
     for (let row = 0; row < grid.length; row++) {
@@ -81,9 +81,9 @@ export class MainScreen extends Container {
 
   private placeUnits() {
     const unitsToPlace = [
-      { type: Infantry, col: 6, row: 6 },
-      { type: Infantry, col: 7, row: 6 },
-      { type: Commando, col: 7, row: 5 },
+      { type: Infantry, x: 6, y: 6 },
+      { type: Infantry, x: 7, y: 6 },
+      { type: Commando, x: 7, y: 5 },
     ];
 
     unitsToPlace.forEach((u) => {
@@ -101,7 +101,7 @@ export class MainScreen extends Container {
           break;
       }
 
-      const tileId = `${u.col}_${u.row}`;
+      const tileId = `${u.x}_${u.y}`;
       const tile = this.tiles.get(tileId);
       if (tile) {
         tile.addChild(unit);
@@ -110,10 +110,87 @@ export class MainScreen extends Container {
           const parentTile = selectedUnit.parent as Tile;
           // Clear previous highlights
           this.tiles.forEach((t) => (t.state = "default"));
-          const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
+          const possibleMoveCoordinates = getPointsAtDistance(
+            parentTile.gridX,
+            parentTile.gridY,
+            selectedUnit.moveRange
+          );
           getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach((t) => {
             t.state = "canMoveTo";
           });
+        });
+
+        unit.on("dragStart", (selectedUnit: Unit) => {
+          this.draggingUnit = selectedUnit;
+          const parentTile = selectedUnit.parent as Tile;
+          this.tiles.forEach((t) => (t.state = "default"));
+          const possibleMoves = getPointsAtDistance(parentTile.gridX, parentTile.gridY, selectedUnit.moveRange);
+          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoves).forEach((t) => {
+            t.state = "canMoveTo";
+          });
+        });
+
+        unit.on("dragMove", (selectedUnit: Unit, globalPos: { x: number; y: number }) => {
+          if (!this.draggingUnit) return;
+
+          const localPos = this.gridContainer.toLocal(globalPos);
+          const col = Math.floor(localPos.x / Tile.TILE_SIZE);
+          const row = Math.floor(localPos.y / Tile.TILE_SIZE);
+          const tileId = `${col}_${row}`;
+          const tile = this.tiles.get(tileId);
+
+          if (this.hoveredTile && this.hoveredTile !== tile) {
+            if (this.hoveredTile.state === "hover") {
+              this.hoveredTile.state = "canMoveTo"; // Revert to regular highlight
+            }
+            this.hoveredTile = null;
+          }
+
+          if (tile && tile.state === "canMoveTo") {
+            tile.state = "hover";
+            this.hoveredTile = tile;
+          }
+        });
+
+        unit.on("dragEnd", (selectedUnit: Unit) => {
+          if (this.draggingUnit === selectedUnit) {
+            if (this.hoveredTile && this.hoveredTile.state === "hover") {
+              const parentTile = selectedUnit.parent as Tile;
+              const targetTile = this.hoveredTile;
+
+              // Calculate position relative to gridContainer
+              const startX = parentTile.x + Tile.TILE_SIZE / 2;
+              const startY = parentTile.y + Tile.TILE_SIZE / 2;
+              const targetX = targetTile.x + Tile.TILE_SIZE / 2;
+              const targetY = targetTile.y + Tile.TILE_SIZE / 2;
+
+              // Re-parent the unit to the gridContainer to render above all tiles during animation
+              this.gridContainer.addChild(selectedUnit);
+              selectedUnit.position.set(startX, startY);
+
+              const runAnimation = async () => {
+                selectedUnit.eventMode = "none"; // Prevent dragging during animation
+                const distTilesX = Math.abs(targetX - startX) / Tile.TILE_SIZE;
+                const distTilesY = Math.abs(targetY - startY) / Tile.TILE_SIZE;
+
+                if (distTilesX > 0) {
+                  await animate(selectedUnit, { x: targetX }, { duration: distTilesX * 0.1, ease: "linear" });
+                }
+                if (distTilesY > 0) {
+                  await animate(selectedUnit, { y: targetY }, { duration: distTilesY * 0.1, ease: "linear" });
+                }
+
+                // Re-parent back to the target tile after animation
+                targetTile.addChild(selectedUnit);
+                selectedUnit.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
+                selectedUnit.eventMode = "static";
+              };
+              runAnimation();
+            }
+            this.draggingUnit = null;
+            this.hoveredTile = null;
+            this.tiles.forEach((t) => (t.state = "default"));
+          }
         });
       }
     });
