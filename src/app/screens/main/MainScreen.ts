@@ -4,7 +4,7 @@ import { Container } from "pixi.js";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
-import { Commando } from "./units/commando";
+import { Commando } from "./units/Commando";
 import { Unit, getPointsAtDistance } from "./units/Unit";
 import { getTilesByCoordinates } from "../../utils/coordinates";
 
