@@ -25,30 +25,16 @@ export class VolumeSlider extends Slider {
     const bg = new Graphics()
       .roundRect(0, 0, width, height, radius)
       .fill({ color: borderColor })
-      .roundRect(
-        border,
-        border,
-        width - border * 2,
-        height - border * 2,
-        radius,
-      )
+      .roundRect(border, border, width - border * 2, height - border * 2, radius)
       .fill({ color: backgroundColor });
 
     const fill = new Graphics()
       .roundRect(0, 0, width, height, radius)
       .fill({ color: borderColor })
-      .roundRect(
-        border,
-        border,
-        width - border * 2,
-        height - border * 2,
-        radius,
-      )
+      .roundRect(border, border, width - border * 2, height - border * 2, radius)
       .fill({ color: fillColor });
 
-    const slider = new Graphics()
-      .circle(0, 0, handleRadius + handleBorder)
-      .fill({ color: meshColor });
+    const slider = new Graphics().circle(0, 0, handleRadius + handleBorder).fill({ color: meshColor });
 
     super({
       bg,

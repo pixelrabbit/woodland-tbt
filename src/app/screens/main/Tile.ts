@@ -68,9 +68,7 @@ export class Tile extends Sprite {
     }
 
     // movable highlight
-    this.highlight = new Graphics()
-      .rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE)
-      .fill({ color: 0xffff00, alpha: 0.25 });
+    this.highlight = new Graphics().rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE).fill({ color: 0xffff00, alpha: 0.25 });
     this.highlight.visible = false;
     this.addChild(this.highlight);
   }

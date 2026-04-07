@@ -13,13 +13,7 @@ export class Unit extends Container {
   private sprite: Sprite;
   private menu: Container;
 
-  constructor(
-    type: U,
-    x: number,
-    y: number,
-    moveRange: number = 3,
-    texture?: Texture,
-  ) {
+  constructor(type: U, x: number, y: number, moveRange: number = 3, texture?: Texture) {
     super();
     this.position.set(x, y);
 
@@ -89,11 +83,7 @@ export class Unit extends Container {
   }
 }
 
-export function getPointsAtDistance(
-  startX: number,
-  startY: number,
-  steps: number,
-): { x: number; y: number }[] {
+export function getPointsAtDistance(startX: number, startY: number, steps: number): { x: number; y: number }[] {
   const points: { x: number; y: number }[] = [];
 
   for (let dx = -steps; dx <= steps; dx++) {
