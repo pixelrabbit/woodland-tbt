@@ -2,6 +2,7 @@ import { sound } from "@pixi/sound";
 import type {
   ApplicationOptions,
   DestroyOptions,
+  AssetsBundle,
   RendererDestroyOptions,
 } from "pixi.js";
 import { Application, Assets, extensions, ResizePlugin } from "pixi.js";
@@ -51,7 +52,7 @@ export class CreationEngine extends Application {
     await Assets.loadBundle("preload");
 
     // List all existing bundles names
-    const allBundles = manifest.bundles.map((item) => item.name);
+    const allBundles = manifest.bundles.map((item: AssetsBundle) => item.name);
     // Start up background loading of all bundles
     Assets.backgroundLoadBundle(allBundles);
   }
