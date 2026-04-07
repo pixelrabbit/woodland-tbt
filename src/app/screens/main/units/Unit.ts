@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
+import { Container, Graphics, Sprite, Text, Texture, FederatedPointerEvent } from "pixi.js";
 
 import { engine } from "../../../getEngine";
 
@@ -76,7 +76,7 @@ export class Unit extends Container {
     this.menu.addChild(moveText, attackText);
   }
 
-  private toggleMenu(e: Event) {
+  private toggleMenu(e: FederatedPointerEvent) {
     // Prevent click from propagating down to the map/grid
     e.stopPropagation();
     const stage = engine().navigation.container;

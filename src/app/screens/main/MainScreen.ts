@@ -4,7 +4,7 @@ import { Container } from "pixi.js";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
-import { Commando } from "./units/commando";
+import { Commando } from "./units/Commando";
 import { Unit, getPointsAtDistance } from "./units/Unit";
 import { getTilesByCoordinates } from "../../utils/coordinates";
 
@@ -172,9 +172,9 @@ export class MainScreen extends Container {
   // public async hide() { }
 
   /** Auto pause the app when window go out of focus */
-  public blur() {
-    if (!engine().navigation.currentPopup) {
-      // engine().navigation.presentPopup(PausePopup);
-    }
-  }
+  // public blur() {
+  //   if (!engine().navigation.currentPopup) {
+  //     // engine().navigation.presentPopup(PausePopup);
+  //   }
+  // }
 }
