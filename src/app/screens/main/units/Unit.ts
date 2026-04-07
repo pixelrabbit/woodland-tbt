@@ -1,6 +1,4 @@
-import { Container, Graphics, Sprite, Text, Texture } from "pixi.js";
-
-import { engine } from "../../../getEngine";
+import { Container, Sprite, Texture, FederatedPointerEvent } from "pixi.js";
 
 export enum U {
   Infantry = "infantry",
@@ -40,13 +38,13 @@ export class Unit extends Container {
     this.emit("dragStart", this);
   };
 
-  private onDragMove = (e: any) => {
+  private onDragMove = (e: FederatedPointerEvent) => {
     if (this.isDragging) {
       this.emit("dragMove", this, e.global);
     }
   };
 
-  private onDragEnd = (e: any) => {
+  private onDragEnd = (e: FederatedPointerEvent) => {
     if (this.isDragging) {
       this.isDragging = false;
       this.emit("dragEnd", this, e.global);
