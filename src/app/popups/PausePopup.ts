@@ -58,18 +58,12 @@ export class PausePopup extends Container {
   public async show() {
     const currentEngine = engine();
     if (currentEngine.navigation.currentScreen) {
-      currentEngine.navigation.currentScreen.filters = [
-        new BlurFilter({ strength: 5 }),
-      ];
+      currentEngine.navigation.currentScreen.filters = [new BlurFilter({ strength: 5 })];
     }
     this.bg.alpha = 0;
     this.panel.pivot.y = -400;
     animate(this.bg, { alpha: 0.8 }, { duration: 0.2, ease: "linear" });
-    await animate(
-      this.panel.pivot,
-      { y: 0 },
-      { duration: 0.3, ease: "backOut" },
-    );
+    await animate(this.panel.pivot, { y: 0 }, { duration: 0.3, ease: "backOut" });
   }
 
   /** Dismiss the popup, animated */
@@ -79,10 +73,6 @@ export class PausePopup extends Container {
       currentEngine.navigation.currentScreen.filters = [];
     }
     animate(this.bg, { alpha: 0 }, { duration: 0.2, ease: "linear" });
-    await animate(
-      this.panel.pivot,
-      { y: -500 },
-      { duration: 0.3, ease: "backIn" },
-    );
+    await animate(this.panel.pivot, { y: -500 }, { duration: 0.3, ease: "backIn" });
   }
 }

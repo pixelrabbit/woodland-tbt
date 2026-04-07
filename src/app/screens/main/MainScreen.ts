@@ -76,10 +76,7 @@ export class MainScreen extends Container {
     }
 
     // Center the grid
-    this.gridContainer.pivot.set(
-      this.gridContainer.width / 2,
-      this.gridContainer.height / 2,
-    );
+    this.gridContainer.pivot.set(this.gridContainer.width / 2, this.gridContainer.height / 2);
   }
 
   private placeUnits() {
@@ -113,15 +110,8 @@ export class MainScreen extends Container {
           const parentTile = selectedUnit.parent as Tile;
           // Clear previous highlights
           this.tiles.forEach((t) => (t.state = "default"));
-          const possibleMoveCoordinates = getPointsAtDistance(
-            parentTile.gridX,
-            parentTile.gridY,
-            3,
-          );
-          getTilesByCoordinates(
-            Array.from(this.tiles.values()),
-            possibleMoveCoordinates,
-          ).forEach((t) => {
+          const possibleMoveCoordinates = getPointsAtDistance(parentTile.gridX, parentTile.gridY, 3);
+          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach((t) => {
             t.state = "canMoveTo";
           });
         });
