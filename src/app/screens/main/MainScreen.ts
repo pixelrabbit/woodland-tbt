@@ -1,7 +1,7 @@
 import type { Ticker } from "pixi.js";
 import { Container } from "pixi.js";
 
-import { engine } from "../../getEngine";
+// import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/Commando";

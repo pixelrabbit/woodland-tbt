@@ -1,4 +1,11 @@
-import { Container, Graphics, Sprite, Text, Texture, FederatedPointerEvent } from "pixi.js";
+import {
+  Container,
+  Graphics,
+  Sprite,
+  Text,
+  Texture,
+  FederatedPointerEvent
+} from "pixi.js";
 
 import { engine } from "../../../getEngine";
 
