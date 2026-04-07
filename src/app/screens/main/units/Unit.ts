@@ -14,6 +14,7 @@ export class Unit extends Container {
 
   constructor(type: U, x: number, y: number, moveRange: number = 3, texture?: Texture) {
     super();
+    console.log(type);
     this.moveRange = moveRange;
     this.position.set(x, y);
 

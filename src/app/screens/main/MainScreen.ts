@@ -131,6 +131,7 @@ export class MainScreen extends Container {
         });
 
         unit.on("dragMove", (selectedUnit: Unit, globalPos: { x: number; y: number }) => {
+          console.log(selectedUnit);
           if (!this.draggingUnit) return;
 
           const localPos = this.gridContainer.toLocal(globalPos);
