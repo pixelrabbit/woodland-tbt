@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, FederatedPointerEvent } from "pixi.js";
+import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text } from "pixi.js";
 
 export enum U {
   Infantry = "infantry",
@@ -9,13 +9,17 @@ export enum U {
 
 export class Unit extends Container {
   private sprite: Sprite;
-  public readonly moveRange: number;
   private isDragging: boolean = false;
+  private healthText?: Text;
+  private _health: number = 10;
+  moveRange: number;
 
-  constructor(type: U, x: number, y: number, moveRange: number = 3, texture?: Texture) {
+  constructor(type: U, x: number, y: number, texture?: Texture) {
     super();
     console.log(type);
-    this.moveRange = moveRange;
+
+    this.moveRange = 3; // TODO: match health approach
+
     this.position.set(x, y);
 
     this.sprite = new Sprite(texture);
@@ -23,6 +27,21 @@ export class Unit extends Container {
     this.sprite.width = 64;
     this.sprite.height = 64;
     this.addChild(this.sprite);
+
+    // Health indicator background (16x16 box placed at the bottom right)
+    const healthBg = new Graphics().rect(16, 16, 16, 16).fill(0x000000);
+    this.addChild(healthBg);
+
+    this.healthText = new Text({
+      text: this._health.toString(),
+      style: {
+        fontSize: 12,
+        fill: 0xffffff,
+      },
+    });
+    this.healthText.anchor.set(0.5);
+    this.healthText.position.set(24, 24); // Centered within the 16x16 box
+    this.addChild(this.healthText);
 
     // Make unit interactive
     this.eventMode = "static";
@@ -37,6 +56,7 @@ export class Unit extends Container {
   private onDragStart = () => {
     this.isDragging = true;
     this.emit("dragStart", this);
+    console.log(this.moveRange);
   };
 
   private onDragMove = (e: FederatedPointerEvent) => {
@@ -51,6 +71,17 @@ export class Unit extends Container {
       this.emit("dragEnd", this, e.global);
     }
   };
+
+  get health(): number {
+    return this._health;
+  }
+
+  set health(value: number) {
+    this._health = value;
+    if (this.healthText) {
+      this.healthText.text = value.toString();
+    }
+  }
 }
 
 export function getPointsAtDistance(startX: number, startY: number, steps: number): { x: number; y: number }[] {

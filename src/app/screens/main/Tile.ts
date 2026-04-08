@@ -1,26 +1,51 @@
-import { Graphics, Sprite, Text, Assets } from "pixi.js";
+import { Graphics, Sprite, Text, Assets, Container, Texture } from "pixi.js";
 
 export enum TileType {
   P = "plain",
   C = "city",
   M = "mountain",
   W = "water",
+  F = "forest",
+}
+
+export interface MovementCost {
+  foot: number;
+  treads: number;
+  tires: number;
+  air: number;
+}
+
+export interface TileData {
+  defense: number;
+  movementCost: MovementCost;
+  texture: Texture;
 }
 
 // A cache for generated textures
 const textureGrass = await Assets.load("assets/main/grass.jpg");
 const textureWater = await Assets.load("assets/main/water.jpg");
 const textureMountain = await Assets.load("assets/main/mountain.png");
+const textureForest = await Assets.load("assets/main/forest.png");
 
-export class Tile extends Sprite {
+const TILE_DATA: Record<TileType, TileData> = {
+  [TileType.P]: { defense: 1, movementCost: { foot: 1, treads: 1, tires: 2, air: 1 }, texture: textureGrass },
+  [TileType.C]: { defense: 3, movementCost: { foot: 1, treads: 1, tires: 1, air: 1 }, texture: textureGrass }, // Default/placeholder values
+  [TileType.M]: { defense: 4, movementCost: { foot: 2, treads: 100, tires: 100, air: 1 }, texture: textureMountain },
+  [TileType.W]: { defense: 0, movementCost: { foot: 100, treads: 100, tires: 100, air: 1 }, texture: textureWater },
+  [TileType.F]: { defense: 2, movementCost: { foot: 1, treads: 2, tires: 3, air: 1 }, texture: textureForest },
+};
+
+export class Tile extends Container {
   public readonly tileType: TileType;
   public readonly id: string;
   public readonly gridX: number;
   public readonly gridY: number;
-  public static readonly TILE_SIZE = 60;
+  public static readonly TILE_SIZE = 64;
+  public readonly movementCost: MovementCost;
   public static showCoordinates = false;
   private _state = "default";
   private highlight: Graphics;
+  // private hoverOutline: Graphics;
   sprite: Sprite;
 
   constructor(type: TileType, x: number, y: number) {
@@ -31,23 +56,12 @@ export class Tile extends Sprite {
     this.gridY = y;
 
     this.tileType = type;
+    this.movementCost = TILE_DATA[type].movementCost;
     this.interactive = true;
     this.sortableChildren = true;
     this.cursor = "pointer";
 
-    let texture;
-    switch (type) {
-      case TileType.P:
-        texture = textureGrass;
-        break;
-      case TileType.M:
-        texture = textureMountain;
-        break;
-      default:
-        texture = textureWater;
-        break;
-    }
-    this.sprite = new Sprite(texture);
+    this.sprite = new Sprite(TILE_DATA[type]?.texture || textureWater);
     this.sprite.anchor.set(0);
     this.sprite.width = 64;
     this.sprite.height = 64;

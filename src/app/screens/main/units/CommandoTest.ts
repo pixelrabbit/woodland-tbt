@@ -6,6 +6,8 @@ const texture = await Assets.load("assets/main/commando.png");
 export class Commando extends Unit {
   constructor(x: number, y: number) {
     // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
-    super(U.Commando, x, y, 3, texture);
+    super(U.Commando, x, y, texture);
+    this.moveRange = 4;
+    this.health = 6;
   }
 }

@@ -44,9 +44,9 @@ export class MainScreen extends Container {
       [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
       [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
       [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
 
@@ -60,6 +60,9 @@ export class MainScreen extends Container {
             break;
           case 2:
             tileType = TileType.M;
+            break;
+          case 3:
+            tileType = TileType.F;
             break;
           default:
             tileType = TileType.W;
@@ -75,8 +78,8 @@ export class MainScreen extends Container {
       }
     }
 
-    // Center the grid
-    this.gridContainer.pivot.set(this.gridContainer.width / 2, this.gridContainer.height / 2);
+    // Center the logical grid rather than the visual bounds
+    this.gridContainer.pivot.set((grid[0].length * Tile.TILE_SIZE) / 2, (grid.length * Tile.TILE_SIZE) / 2);
   }
 
   private placeUnits() {
@@ -130,8 +133,7 @@ export class MainScreen extends Container {
           });
         });
 
-        unit.on("dragMove", (selectedUnit: Unit, globalPos: { x: number; y: number }) => {
-          console.log(selectedUnit);
+        unit.on("dragMove", (_selectedUnit: Unit, globalPos: { x: number; y: number }) => {
           if (!this.draggingUnit) return;
 
           const localPos = this.gridContainer.toLocal(globalPos);

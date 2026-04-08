@@ -6,6 +6,8 @@ const texture = await Assets.load("assets/main/soldier.png");
 export class Infantry extends Unit {
   constructor(x: number, y: number) {
     // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
-    super(U.Infantry, x, y, 3, texture);
+    super(U.Infantry, x, y, texture);
+    this.moveRange = 4;
+    this.health = 5;
   }
 }
