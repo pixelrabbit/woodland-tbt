@@ -1,13 +1,11 @@
 import type { Ticker } from "pixi.js";
-import { Container } from "pixi.js";
-import { animate } from "motion";
+import { Container, Graphics, Text } from "pixi.js";
 
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/CommandoTest";
-import { Unit, getPointsAtDistance } from "./units/Unit";
-import { getTilesByCoordinates } from "../../utils/coordinates";
+import { Unit } from "./units/Unit";
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -18,8 +16,11 @@ export class MainScreen extends Container {
   private gridContainer: Container;
   private tiles: Map<string, Tile> = new Map();
   private paused = false;
-  private draggingUnit: Unit | null = null;
-  private hoveredTile: Tile | null = null;
+  private currentTurn: "blue" | "red" = "blue";
+  private allUnits: Unit[] = [];
+  private endTurnButton!: Container;
+  private turnText!: Text;
+  private hudBg!: Graphics;
 
   constructor() {
     super();
@@ -32,22 +33,67 @@ export class MainScreen extends Container {
 
     this.createGrid();
     this.placeUnits();
+    this.createUI();
+    this.updateUnitInteractivity();
+  }
+
+  private createUI() {
+    //end turn button
+    this.endTurnButton = new Container();
+    const bg = new Graphics().rect(0, 0, 150, 50).fill(0x333333).stroke({ width: 2, color: 0xffffff });
+    const text = new Text({ text: "End Turn", style: { fill: 0xffffff, fontSize: 24, fontWeight: "bold" } });
+    text.anchor.set(0.5);
+    text.position.set(75, 25);
+    this.endTurnButton.addChild(bg, text);
+    this.endTurnButton.eventMode = "static";
+    this.endTurnButton.cursor = "pointer";
+    this.endTurnButton.on("pointerdown", () => this.endTurn());
+    this.addChild(this.endTurnButton);
+
+    //HUD
+    const hudContainer = new Container();
+    this.hudBg = new Graphics()
+      .poly([
+        -4,
+        -4, // Top Left
+        250,
+        -4, // Top Right
+        250,
+        40, // Right before cut
+        210,
+        80, // Bottom after cut
+        -4,
+        80, // Bottom Left
+      ])
+      .fill(this.currentTurn === "blue" ? 0x0000ff : 0xff0000)
+      .stroke({ width: 4, color: 0xffffff });
+
+    hudContainer.addChild(this.hudBg);
+
+    this.turnText = new Text({
+      text: "BLUE",
+      style: { fill: 0xffffff, fontSize: 32, fontWeight: "bold" },
+    });
+    this.turnText.position.set(20, 15);
+    hudContainer.addChild(this.turnText);
+
+    this.addChild(hudContainer);
   }
 
   private createGrid() {
     const grid = [
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 2, 2, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 0, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     ];
 
     for (let row = 0; row < grid.length; row++) {
@@ -83,120 +129,116 @@ export class MainScreen extends Container {
   }
 
   private placeUnits() {
-    const unitsToPlace = [
+    const blue = [
       { type: Infantry, x: 6, y: 6 },
       { type: Infantry, x: 7, y: 6 },
       { type: Commando, x: 7, y: 5 },
     ];
 
-    unitsToPlace.forEach((u) => {
-      const x = Tile.TILE_SIZE / 2;
-      const y = Tile.TILE_SIZE / 2;
+    const red = [
+      { type: Infantry, x: 15, y: 6 },
+      { type: Infantry, x: 16, y: 6 },
+      { type: Commando, x: 14, y: 5 },
+    ];
 
-      let unit;
-      switch (u.type) {
-        case Commando:
-          unit = new Commando(x, y);
-          break;
-        case Infantry:
-        default:
-          unit = new Infantry(x, y);
-          break;
-      }
+    const placeTeamUnits = (
+      team: { type: typeof Infantry | typeof Commando; x: number; y: number }[],
+      color: number,
+      teamName: "blue" | "red"
+    ) => {
+      team.forEach((u) => {
+        const x = Tile.TILE_SIZE / 2;
+        const y = Tile.TILE_SIZE / 2;
 
-      const tileId = `${u.x}_${u.y}`;
-      const tile = this.tiles.get(tileId);
-      if (tile) {
-        tile.addChild(unit);
+        let unit;
+        switch (u.type) {
+          case Commando:
+            unit = new Commando(x, y);
+            break;
+          case Infantry:
+          default:
+            unit = new Infantry(x, y);
+            break;
+        }
 
-        unit.on("requestMove", (selectedUnit: Unit) => {
-          const parentTile = selectedUnit.parent as Tile;
-          // Clear previous highlights
-          this.tiles.forEach((t) => (t.state = "default"));
-          const possibleMoveCoordinates = getPointsAtDistance(
-            parentTile.gridX,
-            parentTile.gridY,
-            selectedUnit.moveRange
-          );
-          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoveCoordinates).forEach((t) => {
-            t.state = "canMoveTo";
-          });
-        });
+        unit.team = teamName;
+        this.allUnits.push(unit);
+        unit.on("moved", () => this.onUnitMoved());
 
-        unit.on("dragStart", (selectedUnit: Unit) => {
-          this.draggingUnit = selectedUnit;
-          const parentTile = selectedUnit.parent as Tile;
-          this.tiles.forEach((t) => (t.state = "default"));
-          const possibleMoves = getPointsAtDistance(parentTile.gridX, parentTile.gridY, selectedUnit.moveRange);
-          getTilesByCoordinates(Array.from(this.tiles.values()), possibleMoves).forEach((t) => {
-            t.state = "canMoveTo";
-          });
-        });
+        const outline = new Graphics().rect(-32, -32, 64, 64).stroke({ width: 2, color, alignment: 1 });
+        unit.addChild(outline);
 
-        unit.on("dragMove", (_selectedUnit: Unit, globalPos: { x: number; y: number }) => {
-          if (!this.draggingUnit) return;
+        const tileId = `${u.x}_${u.y}`;
+        const tile = this.tiles.get(tileId);
+        if (tile) {
+          unit.boardTiles = this.tiles;
+          unit.boardGrid = this.gridContainer;
+          tile.addChild(unit);
+        }
+      });
+    };
 
-          const localPos = this.gridContainer.toLocal(globalPos);
-          const col = Math.floor(localPos.x / Tile.TILE_SIZE);
-          const row = Math.floor(localPos.y / Tile.TILE_SIZE);
-          const tileId = `${col}_${row}`;
-          const tile = this.tiles.get(tileId);
+    placeTeamUnits(blue, 0x0000ff, "blue");
+    placeTeamUnits(red, 0xff0000, "red");
+  }
 
-          if (this.hoveredTile && this.hoveredTile !== tile) {
-            if (this.hoveredTile.state === "hover") {
-              this.hoveredTile.state = "canMoveTo"; // Revert to regular highlight
-            }
-            this.hoveredTile = null;
-          }
-
-          if (tile && tile.state === "canMoveTo") {
-            tile.state = "hover";
-            this.hoveredTile = tile;
-          }
-        });
-
-        unit.on("dragEnd", (selectedUnit: Unit) => {
-          if (this.draggingUnit === selectedUnit) {
-            if (this.hoveredTile && this.hoveredTile.state === "hover") {
-              const parentTile = selectedUnit.parent as Tile;
-              const targetTile = this.hoveredTile;
-
-              // Calculate position relative to gridContainer
-              const startX = parentTile.x + Tile.TILE_SIZE / 2;
-              const startY = parentTile.y + Tile.TILE_SIZE / 2;
-              const targetX = targetTile.x + Tile.TILE_SIZE / 2;
-              const targetY = targetTile.y + Tile.TILE_SIZE / 2;
-
-              // Re-parent the unit to the gridContainer to render above all tiles during animation
-              this.gridContainer.addChild(selectedUnit);
-              selectedUnit.position.set(startX, startY);
-
-              const runAnimation = async () => {
-                selectedUnit.eventMode = "none"; // Prevent dragging during animation
-                const distTilesX = Math.abs(targetX - startX) / Tile.TILE_SIZE;
-                const distTilesY = Math.abs(targetY - startY) / Tile.TILE_SIZE;
-
-                if (distTilesX > 0) {
-                  await animate(selectedUnit, { x: targetX }, { duration: distTilesX * 0.1, ease: "linear" });
-                }
-                if (distTilesY > 0) {
-                  await animate(selectedUnit, { y: targetY }, { duration: distTilesY * 0.1, ease: "linear" });
-                }
-
-                // Re-parent back to the target tile after animation
-                targetTile.addChild(selectedUnit);
-                selectedUnit.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
-                selectedUnit.eventMode = "static";
-              };
-              runAnimation();
-            }
-            this.draggingUnit = null;
-            this.hoveredTile = null;
-            this.tiles.forEach((t) => (t.state = "default"));
-          }
-        });
+  private updateUnitInteractivity() {
+    let allMoved = true;
+    this.allUnits.forEach((u) => {
+      if (u.team === this.currentTurn) {
+        if (u.hasMoved) {
+          u.eventMode = "none";
+          u.alpha = 0.5;
+        } else {
+          u.eventMode = "static";
+          u.alpha = 1;
+          allMoved = false;
+        }
+      } else {
+        u.eventMode = "none";
+        u.alpha = 1;
       }
     });
+
+    // if (allMoved && this.allUnits.length > 0) {
+    //   this.turnText.text = `${this.currentTurn.toUpperCase()} Team - All units moved!`;
+    // }
+  }
+
+  private onUnitMoved() {
+    this.updateUnitInteractivity();
+  }
+
+  private endTurn() {
+    this.currentTurn = this.currentTurn === "blue" ? "red" : "blue";
+    this.allUnits.forEach((u) => {
+      if (u.team === this.currentTurn) {
+        u.hasMoved = false;
+      }
+    });
+    if (this.hudBg) {
+      this.hudBg
+        .clear()
+        .poly([
+          -4,
+          -4, // Top Left
+          250,
+          -4, // Top Right
+          250,
+          40, // Right before cut
+          210,
+          80, // Bottom after cut
+          -4,
+          80, // Bottom Left
+        ])
+        .fill(this.currentTurn === "blue" ? 0x0000ff : 0xff0000)
+        .stroke({ width: 4, color: 0xffffff });
+    }
+
+    if (this.turnText) {
+      this.turnText.text = `${this.currentTurn.toUpperCase()}`;
+    }
+    this.updateUnitInteractivity();
   }
 
   /** Prepare the screen just before showing */
@@ -212,6 +254,11 @@ export class MainScreen extends Container {
   public resize(width: number, height: number) {
     this.mainContainer.x = width / 2;
     this.mainContainer.y = height / 2;
+
+    if (this.endTurnButton) {
+      this.endTurnButton.x = width - 170;
+      this.endTurnButton.y = height - 70;
+    }
   }
 
   /** Pause gameplay - automatically fired when a popup is presented */
@@ -230,7 +277,15 @@ export class MainScreen extends Container {
   public reset() {
     this.gridContainer.removeChildren();
     this.tiles.clear();
+    this.allUnits = [];
+    this.currentTurn = "blue";
+    if (this.turnText) {
+      this.turnText.text = "BLUE Team's Turn";
+      this.turnText.style.fill = 0x0000ff;
+    }
     this.createGrid();
+    this.placeUnits();
+    this.updateUnitInteractivity();
   }
 
   /** Show screen with animations */

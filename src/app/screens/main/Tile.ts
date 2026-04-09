@@ -22,7 +22,7 @@ export interface TileData {
 }
 
 // A cache for generated textures
-const textureGrass = await Assets.load("assets/main/grass.jpg");
+const textureGrass = await Assets.load("assets/main/grass.png");
 const textureWater = await Assets.load("assets/main/water.jpg");
 const textureMountain = await Assets.load("assets/main/mountain.png");
 const textureForest = await Assets.load("assets/main/forest.png");
@@ -44,7 +44,9 @@ export class Tile extends Container {
   public readonly movementCost: MovementCost;
   public static showCoordinates = false;
   private _state = "default";
+  private _isHovered = false;
   private highlight: Graphics;
+  private hoverReticle: Graphics;
   // private hoverOutline: Graphics;
   sprite: Sprite;
 
@@ -59,7 +61,7 @@ export class Tile extends Container {
     this.movementCost = TILE_DATA[type].movementCost;
     this.interactive = true;
     this.sortableChildren = true;
-    this.cursor = "pointer";
+    this.cursor = "default";
 
     this.sprite = new Sprite(TILE_DATA[type]?.texture || textureWater);
     this.sprite.anchor.set(0);
@@ -81,10 +83,59 @@ export class Tile extends Container {
       this.addChild(coordinatesText);
     }
 
-    // movable highlight
+    // range highlight
     this.highlight = new Graphics().rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE).fill({ color: 0xffff00, alpha: 0.25 });
     this.highlight.visible = false;
     this.addChild(this.highlight);
+
+    // hover reticle
+    const length = 16;
+    const s = Tile.TILE_SIZE;
+    const offset = 2; // Keep it slightly inside the tile boundaries
+    this.hoverReticle = new Graphics()
+      .moveTo(offset, offset + length)
+      .lineTo(offset, offset)
+      .lineTo(offset + length, offset)
+      .moveTo(s - offset - length, offset)
+      .lineTo(s - offset, offset)
+      .lineTo(s - offset, offset + length)
+      .moveTo(s - offset, s - offset - length)
+      .lineTo(s - offset, s - offset)
+      .lineTo(s - offset - length, s - offset)
+      .moveTo(offset + length, s - offset)
+      .lineTo(offset, s - offset)
+      .lineTo(offset, s - offset - length)
+      .stroke({ color: 0xffffff, width: 3 });
+    this.hoverReticle.pivot.set(s / 2, s / 2);
+    this.hoverReticle.position.set(s / 2, s / 2);
+    this.hoverReticle.visible = false;
+    this.hoverReticle.zIndex = 10000;
+    this.addChild(this.hoverReticle);
+
+    // Wire up pointer events for hovering
+    this.on("pointerenter", () => {
+      this._isHovered = true;
+      this.updateVisuals();
+    });
+
+    this.on("pointerleave", () => {
+      this._isHovered = false;
+      this.updateVisuals();
+    });
+  }
+
+  private updateVisuals() {
+    this.highlight.visible = false;
+    this.hoverReticle.visible = false;
+
+    if (this._state === "canMoveTo" || this._state === "hover") {
+      this.highlight.tint = 0xffffff;
+      this.highlight.visible = true;
+    }
+
+    if (this._isHovered || this._state === "hover") {
+      this.hoverReticle.visible = true;
+    }
   }
 
   public get state() {
@@ -93,14 +144,6 @@ export class Tile extends Container {
 
   public set state(value: string) {
     this._state = value;
-    if (value === "canMoveTo") {
-      this.highlight.tint = 0xffffff;
-      this.highlight.visible = true;
-    } else if (value === "hover") {
-      this.highlight.tint = 0xff0000;
-      this.highlight.visible = true;
-    } else {
-      this.highlight.visible = false;
-    }
+    this.updateVisuals();
   }
 }
