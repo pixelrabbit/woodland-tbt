@@ -1,11 +1,12 @@
 import type { Ticker } from "pixi.js";
 import { Container, Graphics, Text } from "pixi.js";
-
+import { animate } from "motion";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
-import { Commando } from "./units/CommandoTest";
+import { Commando } from "./units/Commando";
 import { Unit } from "./units/Unit";
+import { C } from "../../common";
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -25,7 +26,11 @@ export class MainScreen extends Container {
   constructor() {
     super();
 
+    // Prevent the default browser right-click menu from appearing
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+
     this.mainContainer = new Container();
+    this.mainContainer.sortableChildren = true;
     this.addChild(this.mainContainer);
 
     this.gridContainer = new Container();
@@ -65,7 +70,7 @@ export class MainScreen extends Container {
         -4,
         80, // Bottom Left
       ])
-      .fill(this.currentTurn === "blue" ? 0x0000ff : 0xff0000)
+      .fill(this.currentTurn === "blue" ? C.blue : C.red)
       .stroke({ width: 4, color: 0xffffff });
 
     hudContainer.addChild(this.hudBg);
@@ -130,9 +135,9 @@ export class MainScreen extends Container {
 
   private placeUnits() {
     const blue = [
-      { type: Infantry, x: 6, y: 6 },
-      { type: Infantry, x: 7, y: 6 },
-      { type: Commando, x: 7, y: 5 },
+      { type: Infantry, x: 10, y: 6 },
+      { type: Infantry, x: 11, y: 6 },
+      { type: Commando, x: 9, y: 5 },
     ];
 
     const red = [
@@ -164,6 +169,10 @@ export class MainScreen extends Container {
         unit.team = teamName;
         this.allUnits.push(unit);
         unit.on("moved", () => this.onUnitMoved());
+        unit.on("attack", (attacker: Unit, target: Unit) => {
+          this.showAttackModal(attacker, target);
+          this.updateUnitInteractivity();
+        });
 
         const outline = new Graphics().rect(-32, -32, 64, 64).stroke({ width: 2, color, alignment: 1 });
         unit.addChild(outline);
@@ -178,15 +187,56 @@ export class MainScreen extends Container {
       });
     };
 
-    placeTeamUnits(blue, 0x0000ff, "blue");
-    placeTeamUnits(red, 0xff0000, "red");
+    placeTeamUnits(blue, C.blueAlt, "blue");
+    placeTeamUnits(red, C.redAlt, "red");
+  }
+
+  private showAttackModal(_attacker: Unit, _target: Unit) {
+    const modal = new Container();
+    const stageHeight = engine().renderer.height;
+    const stageWidth = engine().renderer.width;
+
+    const leftBg = new Graphics()
+      .rect(-(stageWidth / 2), -stageHeight / 2, stageWidth / 2, stageHeight)
+      .fill({ color: C.blue });
+    const rightBg = new Graphics().rect(0, -stageHeight / 2, stageWidth / 2, stageHeight).fill({ color: C.red });
+    leftBg.x = -(stageWidth / 2);
+    rightBg.x = stageWidth / 2;
+
+    modal.addChild(leftBg, rightBg);
+
+    // const text = new Text({
+    //   text: "Attack begins",
+    //   style: { fill: 0xffffff, fontSize: 36, fontWeight: "bold" },
+    // });
+    // text.anchor.set(0.5);
+    // text.alpha = 0;
+    // modal.addChild(text);
+
+    modal.zIndex = 1000;
+    modal.eventMode = "static"; // Intercepts stray clicks while modal is active
+    this.mainContainer.addChild(modal);
+
+    animate(leftBg, { x: 0 }, { duration: 0.4, ease: "easeOut" });
+    animate(rightBg, { x: 0 }, { duration: 0.4, ease: "easeOut" });
+    // animate(text, { alpha: 1 }, { duration: 0.3, delay: 0.2 });
+
+    setTimeout(() => {
+      if (!modal.destroyed) {
+        animate(leftBg, { x: -1000 }, { duration: 0.4, ease: "easeIn" });
+        animate(rightBg, { x: 1000 }, { duration: 0.4, ease: "easeIn" }).then(() => {
+          if (!modal.destroyed) modal.destroy();
+        });
+        // animate(text, { alpha: 0 }, { duration: 0.2 })
+      }
+    }, 2500);
   }
 
   private updateUnitInteractivity() {
     let allMoved = true;
     this.allUnits.forEach((u) => {
       if (u.team === this.currentTurn) {
-        if (u.hasMoved) {
+        if (u.hasMoved && u.hasAttacked) {
           u.eventMode = "none";
           u.alpha = 0.5;
         } else {
@@ -215,6 +265,7 @@ export class MainScreen extends Container {
     this.allUnits.forEach((u) => {
       if (u.team === this.currentTurn) {
         u.hasMoved = false;
+        u.hasAttacked = false;
       }
     });
     if (this.hudBg) {
@@ -232,7 +283,7 @@ export class MainScreen extends Container {
           -4,
           80, // Bottom Left
         ])
-        .fill(this.currentTurn === "blue" ? 0x0000ff : 0xff0000)
+        .fill(this.currentTurn === "blue" ? C.blue : C.red)
         .stroke({ width: 4, color: 0xffffff });
     }
 

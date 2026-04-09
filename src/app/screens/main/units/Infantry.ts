@@ -8,6 +8,7 @@ export class Infantry extends Unit {
     // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
     super(U.Infantry, x, y, texture);
     this.moveRange = 3;
-    this.health = 5;
+    this.health = 10;
+    this.attackRange = 1;
   }
 }

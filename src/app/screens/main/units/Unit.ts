@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text } from "pixi.js";
 import { animate } from "motion";
 import { Tile } from "../Tile";
+import { getReachableTiles, getAttackableTiles } from "../../../utils/coordinates";
 
 export enum U {
   Infantry = "infantry",
@@ -12,15 +13,18 @@ export enum U {
 export class Unit extends Container {
   private sprite: Sprite;
   private isDragging: boolean = false;
+  private isRightDragging: boolean = false;
   private healthText?: Text;
   private _health: number = 10;
   moveRange: number;
   moveType: "foot" | "treads" | "tires" | "air";
+  attackRange: number = 1;
+  public team: "blue" | "red" = "blue";
   public boardTiles?: Map<string, Tile>;
   public boardGrid?: Container;
   private hoveredTile: Tile | null = null;
-  public team: "blue" | "red" = "blue";
-  public hasMoved: boolean = false;
+  hasMoved: boolean = false;
+  hasAttacked: boolean = false;
 
   constructor(_type: U, x: number, y: number, texture?: Texture) {
     super();
@@ -60,6 +64,9 @@ export class Unit extends Container {
     this.on("pointerup", this.onDragEnd, this);
     this.on("pointerupoutside", this.onDragEnd, this);
     this.on("requestMove", this.showMovementRange, this);
+    this.on("rightdown", this.onRightDragStart, this);
+    this.on("rightup", this.onRightDragEnd, this);
+    this.on("rightupoutside", this.onRightDragEnd, this);
   }
 
   public showMovementRange() {
@@ -74,14 +81,27 @@ export class Unit extends Container {
     );
   }
 
-  private onDragStart = () => {
+  private onDragStart = (e: FederatedPointerEvent) => {
+    if (e.button !== 0 || this.hasMoved) return; // Only process left clicks for movement
     this.isDragging = true;
     this.showMovementRange();
     this.emit("dragStart", this);
   };
 
+  private onRightDragStart = () => {
+    if (this.hasAttacked) return;
+    this.isRightDragging = true;
+    if (this.boardTiles) {
+      const parentTile = this.parent as Tile;
+      this.boardTiles.forEach((t) => (t.state = "default"));
+      getAttackableTiles(parentTile.gridX, parentTile.gridY, this.attackRange, this.boardTiles).forEach((t) => {
+        t.state = "canAttack";
+      });
+    }
+  };
+
   private onDragMove = (e: FederatedPointerEvent) => {
-    if (this.isDragging && this.boardGrid && this.boardTiles) {
+    if ((this.isDragging || this.isRightDragging) && this.boardGrid && this.boardTiles) {
       const localPos = this.boardGrid.toLocal(e.global);
       const col = Math.floor(localPos.x / Tile.TILE_SIZE);
       const row = Math.floor(localPos.y / Tile.TILE_SIZE);
@@ -91,13 +111,20 @@ export class Unit extends Container {
       if (this.hoveredTile && this.hoveredTile !== tile) {
         if (this.hoveredTile.state === "hover") {
           this.hoveredTile.state = "canMoveTo"; // Revert to regular highlight
+        } else if (this.hoveredTile.state === "attackHover") {
+          this.hoveredTile.state = "canAttack";
         }
         this.hoveredTile = null;
       }
 
-      if (tile && tile.state === "canMoveTo") {
-        tile.state = "hover";
-        this.hoveredTile = tile;
+      if (tile) {
+        if (this.isDragging && tile.state === "canMoveTo") {
+          tile.state = "hover";
+          this.hoveredTile = tile;
+        } else if (this.isRightDragging && tile.state === "canAttack") {
+          tile.state = "attackHover";
+          this.hoveredTile = tile;
+        }
       }
 
       this.emit("dragMove", this, e.global);
@@ -105,6 +132,7 @@ export class Unit extends Container {
   };
 
   private onDragEnd = (e: FederatedPointerEvent) => {
+    if (e.button !== 0) return; // Only process left clicks
     if (this.isDragging) {
       this.isDragging = false;
 
@@ -156,6 +184,28 @@ export class Unit extends Container {
     }
   };
 
+  private onRightDragEnd = (e: FederatedPointerEvent) => {
+    if (this.isRightDragging) {
+      this.isRightDragging = false;
+
+      if (this.hoveredTile && this.hoveredTile.state === "attackHover") {
+        const targetTile = this.hoveredTile;
+        // Check for opposing team's unit
+        const targetUnit = targetTile.children.find((child) => child instanceof Unit) as Unit | undefined;
+
+        if (targetUnit && targetUnit.team !== this.team) {
+          this.hasAttacked = true;
+          this.emit("attack", this, targetUnit);
+        }
+      }
+
+      this.hoveredTile = null;
+      if (this.boardTiles) {
+        this.boardTiles.forEach((t) => (t.state = "default"));
+      }
+    }
+  };
+
   get health(): number {
     return this._health;
   }
@@ -166,63 +216,4 @@ export class Unit extends Container {
       this.healthText.text = value.toString();
     }
   }
-}
-
-/**
- * Uses Dijkstra's algorithm to find all reachable tiles based on movement range, move type, and terrain costs.
- */
-export function getReachableTiles(
-  startX: number,
-  startY: number,
-  moveRange: number,
-  moveType: "foot" | "treads" | "tires" | "air",
-  tiles: Map<string, Tile>
-): Tile[] {
-  const reachable = new Set<Tile>();
-  const costs = new Map<string, number>();
-
-  const startId = `${startX}_${startY}`;
-  costs.set(startId, 0);
-
-  // Simple priority queue approach using an array
-  const queue = [{ x: startX, y: startY, cost: 0 }];
-
-  const directions = [
-    { dx: 0, dy: -1 },
-    { dx: 0, dy: 1 },
-    { dx: -1, dy: 0 },
-    { dx: 1, dy: 0 },
-  ];
-
-  while (queue.length > 0) {
-    // Sort to ensure we always expand the lowest cost node first
-    queue.sort((a, b) => a.cost - b.cost);
-    const current = queue.shift()!;
-
-    for (const dir of directions) {
-      const nx = current.x + dir.dx;
-      const ny = current.y + dir.dy;
-      const neighborId = `${nx}_${ny}`;
-      const neighborTile = tiles.get(neighborId);
-
-      if (!neighborTile) continue;
-
-      // Cannot move into a tile already occupied by a unit
-      const hasUnit = neighborTile.children.some((child) => child instanceof Unit);
-      if (hasUnit && neighborId !== startId) continue;
-
-      const cost = neighborTile.movementCost[moveType];
-      const newCost = current.cost + cost;
-
-      if (newCost <= moveRange) {
-        if (!costs.has(neighborId) || newCost < costs.get(neighborId)!) {
-          costs.set(neighborId, newCost);
-          reachable.add(neighborTile);
-          queue.push({ x: nx, y: ny, cost: newCost });
-        }
-      }
-    }
-  }
-
-  return Array.from(reachable);
 }

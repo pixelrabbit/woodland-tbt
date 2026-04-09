@@ -127,14 +127,21 @@ export class Tile extends Container {
   private updateVisuals() {
     this.highlight.visible = false;
     this.hoverReticle.visible = false;
+    this.hoverReticle.tint = 0xffffff;
 
     if (this._state === "canMoveTo" || this._state === "hover") {
       this.highlight.tint = 0xffffff;
       this.highlight.visible = true;
+    } else if (this._state === "canAttack" || this._state === "attackHover") {
+      this.highlight.tint = 0xff0000;
+      this.highlight.visible = true;
     }
 
-    if (this._isHovered || this._state === "hover") {
+    if (this._isHovered || this._state === "hover" || this._state === "attackHover") {
       this.hoverReticle.visible = true;
+      if (this._state === "attackHover") {
+        this.hoverReticle.tint = 0xff0000;
+      }
     }
   }
 

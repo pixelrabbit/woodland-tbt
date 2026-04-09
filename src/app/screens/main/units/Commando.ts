@@ -8,6 +8,7 @@ export class Commando extends Unit {
     // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
     super(U.Commando, x, y, texture);
     this.moveRange = 3;
-    this.health = 6;
+    this.health = 10;
+    this.attackRange = 1;
   }
 }
