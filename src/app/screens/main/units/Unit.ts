@@ -128,10 +128,10 @@ export class Unit extends Container {
           const distTilesY = Math.abs(targetY - startY) / Tile.TILE_SIZE;
 
           if (distTilesX > 0) {
-            await animate(this as any, { x: targetX }, { duration: distTilesX * 0.1, ease: "linear" });
+            await animate(this as Container, { x: targetX }, { duration: distTilesX * 0.1, ease: "linear" });
           }
           if (distTilesY > 0) {
-            await animate(this as any, { y: targetY }, { duration: distTilesY * 0.1, ease: "linear" });
+            await animate(this as Container, { y: targetY }, { duration: distTilesY * 0.1, ease: "linear" });
           }
 
           // Re-parent back to the target tile after animation

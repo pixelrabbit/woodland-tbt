@@ -203,6 +203,7 @@ export class MainScreen extends Container {
     // if (allMoved && this.allUnits.length > 0) {
     //   this.turnText.text = `${this.currentTurn.toUpperCase()} Team - All units moved!`;
     // }
+    console.log(allMoved);
   }
 
   private onUnitMoved() {
