@@ -192,6 +192,7 @@ export class MainScreen extends Container {
   }
 
   private showAttackModal(_attacker: Unit, _target: Unit) {
+    console.log(_attacker, _target);
     const modal = new Container();
     const stageHeight = engine().renderer.height;
     const stageWidth = engine().renderer.width;

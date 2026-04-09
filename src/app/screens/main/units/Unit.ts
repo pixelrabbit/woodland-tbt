@@ -184,7 +184,7 @@ export class Unit extends Container {
     }
   };
 
-  private onRightDragEnd = (e: FederatedPointerEvent) => {
+  private onRightDragEnd = () => {
     if (this.isRightDragging) {
       this.isRightDragging = false;
 
