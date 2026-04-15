@@ -208,7 +208,7 @@ export class MainScreen extends Container {
       unitType: attacker.constructor.name,
       health: attacker.health,
       terrain: attackerTile.tileType,
-      texture: (attacker as any).sprite.texture,
+      texture: (attacker as Unit).sprite.texture,
       team: attacker.team,
     });
 
@@ -217,7 +217,7 @@ export class MainScreen extends Container {
       unitType: target.constructor.name,
       health: target.health,
       terrain: targetTile.tileType,
-      texture: (target as any).sprite.texture,
+      texture: (target as Unit).sprite.texture,
       team: target.team,
     });
   }

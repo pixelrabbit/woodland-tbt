@@ -6,11 +6,18 @@ import { getReachableTiles, getAttackableTiles } from "../../../utils/coordinate
 export enum U {
   Infantry = "infantry",
   Commando = "commando",
-  Artillery = "artillery",
-  Tank = "tank",
+  tankLight = "tankLight",
 }
 
-export const UNIT: any = {
+interface IUnit {
+  health: number;
+  moveType: "foot" | "treads" | "tires" | "air";
+  moveRange: number;
+  attackRange: number;
+  damage: Record<string, { primary: number; secondary: number }>;
+}
+
+export const UNIT: Record<U, IUnit> = {
   infantry: {
     health: 100,
     moveType: "foot",
@@ -35,7 +42,7 @@ export const UNIT: any = {
   },
   tankLight: {
     health: 100,
-    moveType: "tread",
+    moveType: "treads",
     moveRange: 4,
     attackRange: 3,
     damage: {
@@ -47,7 +54,7 @@ export const UNIT: any = {
 };
 
 export class Unit extends Container {
-  private sprite: Sprite;
+  sprite: Sprite;
   private isDragging: boolean = false;
   private isRightDragging: boolean = false;
   private healthText?: Text;
