@@ -10,6 +10,42 @@ export enum U {
   Tank = "tank",
 }
 
+export const UNIT: any = {
+  infantry: {
+    health: 100,
+    moveType: "foot",
+    moveRange: 3,
+    attackRange: 1,
+    damage: {
+      infantry: { primary: 0, secondary: 55 },
+      commando: { primary: 0, secondary: 45 },
+      tankLight: { primary: 0, secondary: 5 },
+    },
+  },
+  commando: {
+    health: 100,
+    moveType: "foot",
+    moveRange: 3,
+    attackRange: 1,
+    damage: {
+      infantry: { primary: 0, secondary: 65 },
+      commando: { primary: 0, secondary: 55 },
+      tankLight: { primary: 55, secondary: 6 },
+    },
+  },
+  tankLight: {
+    health: 100,
+    moveType: "tread",
+    moveRange: 4,
+    attackRange: 3,
+    damage: {
+      infantry: { primary: 35, secondary: 75 },
+      commando: { primary: 30, secondary: 70 },
+      tankLight: { primary: 55, secondary: 6 },
+    },
+  },
+};
+
 export class Unit extends Container {
   private sprite: Sprite;
   private isDragging: boolean = false;
@@ -26,11 +62,13 @@ export class Unit extends Container {
   hasMoved: boolean = false;
   hasAttacked: boolean = false;
 
-  constructor(_type: U, x: number, y: number, texture?: Texture) {
+  constructor(type: U, x: number, y: number, texture?: Texture) {
     super();
 
-    this.moveRange = 3; // TODO: match health approach
-    this.moveType = "foot";
+    this.moveRange = UNIT[type].moveRange;
+    this.moveType = UNIT[type].moveType;
+    this.attackRange = UNIT[type].attackRange;
+    this.health = UNIT[type].health;
 
     this.position.set(x, y);
 
@@ -45,7 +83,7 @@ export class Unit extends Container {
     this.addChild(healthBg);
 
     this.healthText = new Text({
-      text: this._health.toString(),
+      text: Math.max(this._health / 10).toString(),
       style: {
         fontSize: 12,
         fill: 0xffffff,

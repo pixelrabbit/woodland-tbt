@@ -1,11 +1,11 @@
 import type { Ticker } from "pixi.js";
 import { Container, Graphics, Text } from "pixi.js";
-import { animate } from "motion";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/Commando";
 import { Unit } from "./units/Unit";
+import { UnitModal } from "./UnitModal";
 import { C } from "../../common";
 
 /** The screen that holds the app */
@@ -22,6 +22,8 @@ export class MainScreen extends Container {
   private endTurnButton!: Container;
   private turnText!: Text;
   private hudBg!: Graphics;
+  private attackerModal!: UnitModal;
+  private targetModal!: UnitModal;
 
   constructor() {
     super();
@@ -40,6 +42,12 @@ export class MainScreen extends Container {
     this.placeUnits();
     this.createUI();
     this.updateUnitInteractivity();
+
+    this.attackerModal = new UnitModal();
+    this.targetModal = new UnitModal();
+
+    this.addChild(this.attackerModal);
+    this.addChild(this.targetModal);
   }
 
   private createUI() {
@@ -191,46 +199,27 @@ export class MainScreen extends Container {
     placeTeamUnits(red, C.redAlt, "red");
   }
 
-  private showAttackModal(_attacker: Unit, _target: Unit) {
-    console.log(_attacker, _target);
-    const modal = new Container();
-    const stageHeight = engine().renderer.height;
-    const stageWidth = engine().renderer.width;
+  private showAttackModal(attacker: Unit, target: Unit) {
+    const attackerTile = attacker.parent as Tile;
+    const targetTile = target.parent as Tile;
 
-    const leftBg = new Graphics()
-      .rect(-(stageWidth / 2), -stageHeight / 2, stageWidth / 2, stageHeight)
-      .fill({ color: C.blue });
-    const rightBg = new Graphics().rect(0, -stageHeight / 2, stageWidth / 2, stageHeight).fill({ color: C.red });
-    leftBg.x = -(stageWidth / 2);
-    rightBg.x = stageWidth / 2;
+    this.attackerModal.show({
+      attacker: true,
+      unitType: attacker.constructor.name,
+      health: attacker.health,
+      terrain: attackerTile.tileType,
+      texture: (attacker as any).sprite.texture,
+      team: attacker.team,
+    });
 
-    modal.addChild(leftBg, rightBg);
-
-    // const text = new Text({
-    //   text: "Attack begins",
-    //   style: { fill: 0xffffff, fontSize: 36, fontWeight: "bold" },
-    // });
-    // text.anchor.set(0.5);
-    // text.alpha = 0;
-    // modal.addChild(text);
-
-    modal.zIndex = 1000;
-    modal.eventMode = "static"; // Intercepts stray clicks while modal is active
-    this.mainContainer.addChild(modal);
-
-    animate(leftBg, { x: 0 }, { duration: 0.4, ease: "easeOut" });
-    animate(rightBg, { x: 0 }, { duration: 0.4, ease: "easeOut" });
-    // animate(text, { alpha: 1 }, { duration: 0.3, delay: 0.2 });
-
-    setTimeout(() => {
-      if (!modal.destroyed) {
-        animate(leftBg, { x: -1000 }, { duration: 0.4, ease: "easeIn" });
-        animate(rightBg, { x: 1000 }, { duration: 0.4, ease: "easeIn" }).then(() => {
-          if (!modal.destroyed) modal.destroy();
-        });
-        // animate(text, { alpha: 0 }, { duration: 0.2 })
-      }
-    }, 2500);
+    this.targetModal.show({
+      attacker: false,
+      unitType: target.constructor.name,
+      health: target.health,
+      terrain: targetTile.tileType,
+      texture: (target as any).sprite.texture,
+      team: target.team,
+    });
   }
 
   private updateUnitInteractivity() {
@@ -311,6 +300,12 @@ export class MainScreen extends Container {
     if (this.endTurnButton) {
       this.endTurnButton.x = width - 170;
       this.endTurnButton.y = height - 70;
+    }
+
+    if (this.attackerModal && this.targetModal) {
+      this.attackerModal.resize(width, height);
+      this.targetModal.resize(width, height);
+      this.targetModal.x = width / 2;
     }
   }
 
