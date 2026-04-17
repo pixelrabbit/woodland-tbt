@@ -3,7 +3,7 @@ import { animate } from "motion";
 import { engine } from "../../getEngine";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
-import { Unit, UNIT, U } from "./units/Unit";
+import { Unit, UNIT } from "./units/Unit";
 import { Tile } from "./Tile";
 
 class BattlePanel extends Container {
