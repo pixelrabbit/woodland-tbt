@@ -69,6 +69,7 @@ export class Unit extends Container {
   hasMoved: boolean = false;
   hasAttacked: boolean = false;
   private isDead: boolean = false;
+  public unitType: U;
 
   constructor(type: U, x: number, y: number, texture?: Texture) {
     super();
@@ -77,6 +78,7 @@ export class Unit extends Container {
     this.moveType = UNIT[type].moveType;
     this.attackRange = UNIT[type].attackRange;
     this.health = UNIT[type].health;
+    this.unitType = type;
 
     this.position.set(x, y);
 

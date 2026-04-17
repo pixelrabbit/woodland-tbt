@@ -61,7 +61,7 @@ class BattlePanel extends Container {
   public update(unit: Unit) {
     const tile = unit.parent as Tile;
 
-    this.typeText.text = `Unit: ${unit.constructor.name.toUpperCase()}`;
+    this.typeText.text = `Unit: ${unit.unitType.toUpperCase()}`;
     this.healthText.text = `Health: ${unit.health / 10}`;
     this.terrainText.text = `Terrain: ${tile.tileType.toUpperCase()}`;
     if (unit.sprite.texture) this.unitSprite.texture = unit.sprite.texture;
@@ -149,8 +149,8 @@ export class BattleModal extends Container {
   }
 
   private executeStrike(source: Unit, target: Unit, targetPanel: BattlePanel) {
-    const sourceType = source.constructor.name.toLowerCase() as U;
-    const targetType = target.constructor.name.toLowerCase() as U;
+    const sourceType = source.unitType;
+    const targetType = target.unitType;
 
     const damageTable = UNIT[sourceType].damage[targetType];
     const maxDamage = Math.max(damageTable.primary, damageTable.secondary);
