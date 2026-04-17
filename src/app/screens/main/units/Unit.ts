@@ -68,6 +68,7 @@ export class Unit extends Container {
   private hoveredTile: Tile | null = null;
   hasMoved: boolean = false;
   hasAttacked: boolean = false;
+  private isDead: boolean = false;
 
   constructor(type: U, x: number, y: number, texture?: Texture) {
     super();
@@ -260,5 +261,25 @@ export class Unit extends Container {
     if (this.healthText) {
       this.healthText.text = value.toString();
     }
+
+    if (this._health <= 0 && !this.isDead) {
+      this.isDead = true;
+      this.die();
+    }
+  }
+
+  private async die() {
+    this.eventMode = "none"; // Stop interactions during death animation
+    await animate(
+      this as Container,
+      { width: 0, height: 0 },
+      {
+        duration: 0.3,
+        onComplete: () => {
+          this.removeFromParent();
+          this.destroy(); // Free up memory
+        },
+      }
+    );
   }
 }

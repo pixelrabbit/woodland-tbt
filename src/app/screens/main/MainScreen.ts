@@ -5,7 +5,7 @@ import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/Commando";
 import { Unit } from "./units/Unit";
-import { UnitModal } from "./UnitModal";
+import { BattleModal } from "./BattleModal";
 import { C } from "../../common";
 
 /** The screen that holds the app */
@@ -22,8 +22,7 @@ export class MainScreen extends Container {
   private endTurnButton!: Container;
   private turnText!: Text;
   private hudBg!: Graphics;
-  private attackerModal!: UnitModal;
-  private targetModal!: UnitModal;
+  private battleModal!: BattleModal;
 
   constructor() {
     super();
@@ -43,11 +42,9 @@ export class MainScreen extends Container {
     this.createUI();
     this.updateUnitInteractivity();
 
-    this.attackerModal = new UnitModal();
-    this.targetModal = new UnitModal();
+    this.battleModal = new BattleModal();
 
-    this.addChild(this.attackerModal);
-    this.addChild(this.targetModal);
+    this.addChild(this.battleModal);
   }
 
   private createUI() {
@@ -143,9 +140,9 @@ export class MainScreen extends Container {
 
   private placeUnits() {
     const blue = [
-      { type: Infantry, x: 10, y: 6 },
+      { type: Infantry, x: 12, y: 6 },
       { type: Infantry, x: 11, y: 6 },
-      { type: Commando, x: 9, y: 5 },
+      { type: Commando, x: 12, y: 5 },
     ];
 
     const red = [
@@ -178,7 +175,7 @@ export class MainScreen extends Container {
         this.allUnits.push(unit);
         unit.on("moved", () => this.onUnitMoved());
         unit.on("attack", (attacker: Unit, target: Unit) => {
-          this.showAttackModal(attacker, target);
+          this.battleModal.battle(attacker, target);
           this.updateUnitInteractivity();
         });
 
@@ -197,29 +194,6 @@ export class MainScreen extends Container {
 
     placeTeamUnits(blue, C.blueAlt, "blue");
     placeTeamUnits(red, C.redAlt, "red");
-  }
-
-  private showAttackModal(attacker: Unit, target: Unit) {
-    const attackerTile = attacker.parent as Tile;
-    const targetTile = target.parent as Tile;
-
-    this.attackerModal.show({
-      attacker: true,
-      unitType: attacker.constructor.name,
-      health: attacker.health,
-      terrain: attackerTile.tileType,
-      texture: (attacker as Unit).sprite.texture,
-      team: attacker.team,
-    });
-
-    this.targetModal.show({
-      attacker: false,
-      unitType: target.constructor.name,
-      health: target.health,
-      terrain: targetTile.tileType,
-      texture: (target as Unit).sprite.texture,
-      team: target.team,
-    });
   }
 
   private updateUnitInteractivity() {
@@ -302,10 +276,8 @@ export class MainScreen extends Container {
       this.endTurnButton.y = height - 70;
     }
 
-    if (this.attackerModal && this.targetModal) {
-      this.attackerModal.resize(width, height);
-      this.targetModal.resize(width, height);
-      this.targetModal.x = width / 2;
+    if (this.battleModal) {
+      this.battleModal.resize(width, height);
     }
   }
 
