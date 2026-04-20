@@ -4,13 +4,14 @@ import { engine } from "../../getEngine";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
 import { Unit, UNIT } from "./units/Unit";
-import { Tile } from "./Tile";
+import { Tile, TILE_DATA } from "./Tile";
 
 class BattlePanel extends Container {
   public bg: Graphics;
   public typeText: Text;
   public healthText: Text;
   public terrainText: Text;
+  public defenseText: Text;
   public unitSprite: Sprite;
   public bgColor = 0x000000;
 
@@ -52,14 +53,20 @@ class BattlePanel extends Container {
     this.terrainText.anchor.set(0.5, 0);
     this.terrainText.position.set(centerX, 180);
     this.addChild(this.terrainText);
+
+    this.defenseText = new Text({ text: "Defense:", style: textStyle });
+    this.defenseText.anchor.set(0.5, 0);
+    this.defenseText.position.set(centerX, 220);
+    this.addChild(this.defenseText);
   }
 
   public update(unit: Unit) {
     const tile = unit.parent as Tile;
 
     this.typeText.text = `Unit: ${unit.unitType.toUpperCase()}`;
-    this.healthText.text = `Health: ${unit.health / 10}`;
+    this.healthText.text = `Health: ${unit.health}`;
     this.terrainText.text = `Terrain: ${tile.tileType.toUpperCase()}`;
+    this.defenseText.text = `Defense: ${TILE_DATA[tile.tileType].defense}`;
     if (unit.sprite.texture) this.unitSprite.texture = unit.sprite.texture;
 
     this.bgColor = unit.team === "blue" ? C.blue : C.red;
@@ -91,6 +98,7 @@ class BattlePanel extends Container {
     this.typeText.position.set(centerX, 80);
     this.healthText.position.set(centerX, 140);
     this.terrainText.position.set(centerX, 180);
+    this.defenseText.position.set(centerX, 220);
   }
 }
 
@@ -157,10 +165,17 @@ export class BattleModal extends Container {
     const sourceType = source.unitType;
     const targetType = target.unitType;
 
+    // get damage based on damage rating by unit
     const damageTable = UNIT[sourceType].damage[targetType];
     const maxDamage = Math.max(damageTable.primary, damageTable.secondary);
-    const damageDealt = Math.floor((source.health / 100) * maxDamage);
 
+    //reduce damage by tile defense rating
+    const targetTile = target.parent as Tile;
+    const defenseRating = TILE_DATA[targetTile.tileType].defense;
+    const defenseMultiplier = Math.max(0, 1 - defenseRating * 0.1); // 10% reduction per defense point
+    const damageDealt = Math.floor((source.health / 100) * maxDamage * defenseMultiplier);
+
+    // reduce unit health
     target.health = Math.max(0, target.health - damageDealt);
     targetPanel.update(target);
 

@@ -5,7 +5,7 @@ import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/Commando";
 import { Unit } from "./units/Unit";
-import { BattleModal } from "./BattleModal";
+import { BattleModal } from "./Battle";
 import { C } from "../../common";
 
 /** The screen that holds the app */
@@ -99,7 +99,7 @@ export class MainScreen extends Container {
       [0, 1, 1, 1, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0],
       [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
       [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 0],
       [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
       [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
       [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],

@@ -27,12 +27,57 @@ const textureWater = await Assets.load("assets/main/water.jpg");
 const textureMountain = await Assets.load("assets/main/mountain.png");
 const textureForest = await Assets.load("assets/main/forest.png");
 
-const TILE_DATA: Record<TileType, TileData> = {
-  [TileType.P]: { defense: 1, movementCost: { foot: 1, treads: 1, tires: 2, air: 1 }, texture: textureGrass },
-  [TileType.C]: { defense: 3, movementCost: { foot: 1, treads: 1, tires: 1, air: 1 }, texture: textureGrass }, // Default/placeholder values
-  [TileType.M]: { defense: 4, movementCost: { foot: 2, treads: 100, tires: 100, air: 1 }, texture: textureMountain },
-  [TileType.W]: { defense: 0, movementCost: { foot: 100, treads: 100, tires: 100, air: 1 }, texture: textureWater },
-  [TileType.F]: { defense: 2, movementCost: { foot: 1, treads: 2, tires: 3, air: 1 }, texture: textureForest },
+export const TILE_DATA: Record<TileType, TileData> = {
+  [TileType.P]: {
+    defense: 1,
+    movementCost: {
+      foot: 1,
+      treads: 1,
+      tires: 2,
+      air: 1,
+    },
+    texture: textureGrass,
+  },
+  [TileType.C]: {
+    defense: 3,
+    movementCost: {
+      foot: 1,
+      treads: 1,
+      tires: 1,
+      air: 1,
+    },
+    texture: textureGrass,
+  },
+  [TileType.M]: {
+    defense: 4,
+    movementCost: {
+      foot: 2,
+      treads: 100,
+      tires: 100,
+      air: 1,
+    },
+    texture: textureMountain,
+  },
+  [TileType.W]: {
+    defense: 0,
+    movementCost: {
+      foot: 100,
+      treads: 100,
+      tires: 100,
+      air: 1,
+    },
+    texture: textureWater,
+  },
+  [TileType.F]: {
+    defense: 2,
+    movementCost: {
+      foot: 1,
+      treads: 2,
+      tires: 3,
+      air: 1,
+    },
+    texture: textureForest,
+  },
 };
 
 export class Tile extends Container {

@@ -58,7 +58,7 @@ export class Unit extends Container {
   private isDragging: boolean = false;
   private isRightDragging: boolean = false;
   private healthText?: Text;
-  private _health: number = 10;
+  private _health: number = 100;
   moveRange: number;
   moveType: "foot" | "treads" | "tires" | "air";
   attackRange: number = 1;
@@ -89,18 +89,18 @@ export class Unit extends Container {
     this.addChild(this.sprite);
 
     // Health indicator background (16x16 box placed at the bottom right)
-    const healthBg = new Graphics().rect(16, 16, 16, 16).fill(0x000000);
+    const healthBg = new Graphics().rect(8, 16, 24, 16).fill(0x000000);
     this.addChild(healthBg);
 
     this.healthText = new Text({
-      text: Math.max(this._health / 10).toString(),
+      text: Math.max(this._health).toString(),
       style: {
         fontSize: 12,
         fill: 0xffffff,
       },
     });
     this.healthText.anchor.set(0.5);
-    this.healthText.position.set(24, 24); // Centered within the 16x16 box
+    this.healthText.position.set(20, 24); // Centered within the 16x16 box
     this.addChild(this.healthText);
 
     // Make unit interactive
