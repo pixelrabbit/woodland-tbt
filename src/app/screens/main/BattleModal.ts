@@ -13,11 +13,9 @@ class BattlePanel extends Container {
   public terrainText: Text;
   public unitSprite: Sprite;
   public bgColor = 0x000000;
-  private isAttacker: boolean;
 
-  constructor(isAttacker: boolean) {
+  constructor() {
     super();
-    this.isAttacker = isAttacker;
 
     const stageWidth = engine().renderer.width;
     const stageHeight = engine().renderer.height;
@@ -54,8 +52,6 @@ class BattlePanel extends Container {
     this.terrainText.anchor.set(0.5, 0);
     this.terrainText.position.set(centerX, 180);
     this.addChild(this.terrainText);
-
-    this.x = isAttacker ? 0 : modalWidth;
   }
 
   public update(unit: Unit) {
@@ -95,8 +91,6 @@ class BattlePanel extends Container {
     this.typeText.position.set(centerX, 80);
     this.healthText.position.set(centerX, 140);
     this.terrainText.position.set(centerX, 180);
-
-    this.x = this.isAttacker ? 0 : modalWidth;
   }
 }
 
@@ -104,12 +98,13 @@ export class BattleModal extends Container {
   private attackerPanel: BattlePanel;
   private targetPanel: BattlePanel;
   private currentShowId = 0;
+  private attackerOnLeft = true;
 
   constructor() {
     super();
 
-    this.attackerPanel = new BattlePanel(true);
-    this.targetPanel = new BattlePanel(false);
+    this.attackerPanel = new BattlePanel();
+    this.targetPanel = new BattlePanel();
 
     this.addChild(this.attackerPanel);
     this.addChild(this.targetPanel);
@@ -121,6 +116,16 @@ export class BattleModal extends Container {
 
   public async battle(attacker: Unit, target: Unit) {
     const showId = ++this.currentShowId;
+
+    // figure out if attacker is left or right
+    const attackerTile = attacker.parent as Tile;
+    const targetTile = target.parent as Tile;
+    this.attackerOnLeft = attackerTile.gridX <= targetTile.gridX;
+
+    // position panels based on direction
+    const halfWidth = engine().renderer.width / 2;
+    this.attackerPanel.x = this.attackerOnLeft ? 0 : halfWidth;
+    this.targetPanel.x = this.attackerOnLeft ? halfWidth : 0;
 
     this.attackerPanel.update(attacker);
     this.targetPanel.update(target);
@@ -134,7 +139,7 @@ export class BattleModal extends Container {
     this.executeStrike(attacker, target, this.targetPanel);
 
     // pause
-    await waitFor(0.5);
+    await waitFor(1);
 
     // counter
     if (target.health > 0) {
@@ -172,5 +177,9 @@ export class BattleModal extends Container {
   public resize(width: number, height: number) {
     this.attackerPanel.resize(width, height);
     this.targetPanel.resize(width, height);
+
+    const halfWidth = width / 2;
+    this.attackerPanel.x = this.attackerOnLeft ? 0 : halfWidth;
+    this.targetPanel.x = this.attackerOnLeft ? halfWidth : 0;
   }
 }
