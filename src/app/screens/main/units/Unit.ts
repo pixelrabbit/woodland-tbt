@@ -2,6 +2,7 @@ import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text } fro
 import { animate } from "motion";
 import { Tile } from "../Tile";
 import { getReachableTiles, getAttackableTiles } from "../../../utils/coordinates";
+import { C } from "../../../common";
 
 export enum U {
   Infantry = "infantry",
@@ -58,11 +59,12 @@ export class Unit extends Container {
   private isDragging: boolean = false;
   private isRightDragging: boolean = false;
   private healthText?: Text;
+  private healthBg?: Graphics;
   private _health: number = 100;
   moveRange: number;
   moveType: "foot" | "treads" | "tires" | "air";
   attackRange: number = 1;
-  public team: "blue" | "red" = "blue";
+  private _team: "blue" | "red" = "blue";
   public boardTiles?: Map<string, Tile>;
   public boardGrid?: Container;
   private hoveredTile: Tile | null = null;
@@ -70,6 +72,20 @@ export class Unit extends Container {
   hasAttacked: boolean = false;
   private isDead: boolean = false;
   public unitType: U;
+
+  get team(): "blue" | "red" {
+    return this._team;
+  }
+
+  set team(value: "blue" | "red") {
+    this._team = value;
+    if (this.healthBg) {
+      this.healthBg
+        .clear()
+        .rect(8, 16, 24, 16)
+        .fill(value === "blue" ? C.blue : C.red);
+    }
+  }
 
   constructor(type: U, x: number, y: number, texture?: Texture) {
     super();
@@ -89,8 +105,8 @@ export class Unit extends Container {
     this.addChild(this.sprite);
 
     // Health indicator background (16x16 box placed at the bottom right)
-    const healthBg = new Graphics().rect(8, 16, 24, 16).fill(0x000000);
-    this.addChild(healthBg);
+    this.healthBg = new Graphics().rect(8, 16, 24, 16).fill(0x000000);
+    this.addChild(this.healthBg);
 
     this.healthText = new Text({
       text: Math.max(this._health).toString(),
