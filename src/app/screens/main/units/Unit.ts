@@ -97,6 +97,7 @@ export class Unit extends Container {
       style: {
         fontSize: 12,
         fill: 0xffffff,
+        fontFamily: "Allerta Stencil",
       },
     });
     this.healthText.anchor.set(0.5);

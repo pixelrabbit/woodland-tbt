@@ -1,9 +1,12 @@
 import type { Ticker } from "pixi.js";
 import { Container, Graphics, Text } from "pixi.js";
+import { animate } from "motion";
+import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
 import { Infantry } from "./units/Infantry";
 import { Commando } from "./units/Commando";
+import { LightTank } from "./units/LightTank";
 import { Unit } from "./units/Unit";
 import { BattleModal } from "./Battle";
 import { C } from "../../common";
@@ -11,7 +14,7 @@ import { C } from "../../common";
 /** The screen that holds the app */
 export class MainScreen extends Container {
   /** Assets bundles required by this screen  */
-  public static assetBundles = ["main"];
+  public static assetBundles = ["main", "default"];
 
   public mainContainer: Container;
   private gridContainer: Container;
@@ -51,7 +54,10 @@ export class MainScreen extends Container {
     //end turn button
     this.endTurnButton = new Container();
     const bg = new Graphics().rect(0, 0, 150, 50).fill(0x333333).stroke({ width: 2, color: 0xffffff });
-    const text = new Text({ text: "End Turn", style: { fill: 0xffffff, fontSize: 24, fontWeight: "bold" } });
+    const text = new Text({
+      text: "End Turn",
+      style: { fill: 0xffffff, fontSize: 24, fontWeight: "bold", fontFamily: "Allerta Stencil" },
+    });
     text.anchor.set(0.5);
     text.position.set(75, 25);
     this.endTurnButton.addChild(bg, text);
@@ -82,7 +88,7 @@ export class MainScreen extends Container {
 
     this.turnText = new Text({
       text: "BLUE",
-      style: { fill: 0xffffff, fontSize: 32, fontWeight: "bold" },
+      style: { fill: 0xffffff, fontSize: 32, fontWeight: "bold", fontFamily: "Allerta Stencil" },
     });
     this.turnText.position.set(20, 15);
     hudContainer.addChild(this.turnText);
@@ -143,16 +149,18 @@ export class MainScreen extends Container {
       { type: Infantry, x: 12, y: 6 },
       { type: Infantry, x: 11, y: 6 },
       { type: Commando, x: 12, y: 5 },
+      { type: LightTank, x: 11, y: 5 },
     ];
 
     const red = [
       { type: Infantry, x: 15, y: 6 },
       { type: Infantry, x: 16, y: 6 },
       { type: Commando, x: 14, y: 5 },
+      { type: LightTank, x: 15, y: 5 },
     ];
 
     const placeTeamUnits = (
-      team: { type: typeof Infantry | typeof Commando; x: number; y: number }[],
+      team: { type: typeof Infantry | typeof Commando | typeof LightTank; x: number; y: number }[],
       color: number,
       teamName: "blue" | "red"
     ) => {
@@ -164,6 +172,9 @@ export class MainScreen extends Container {
         switch (u.type) {
           case Commando:
             unit = new Commando(x, y);
+            break;
+          case LightTank:
+            unit = new LightTank(x, y);
             break;
           case Infantry:
           default:
@@ -255,6 +266,39 @@ export class MainScreen extends Container {
       this.turnText.text = `${this.currentTurn.toUpperCase()}`;
     }
     this.updateUnitInteractivity();
+    this.showTurnBanner(this.currentTurn);
+  }
+
+  // TURN BANNER
+  private async showTurnBanner(team: "blue" | "red") {
+    const banner = new Container();
+    banner.eventMode = "static"; // Block clicks underneath during the animation
+
+    const w = engine().renderer.width;
+    const h = engine().renderer.height;
+    const bannerHeight = h / 3;
+    const startY = (h - bannerHeight) / 2;
+
+    const blocker = new Graphics().rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0 });
+    const bg = new Graphics()
+      .rect(0, startY, w, bannerHeight)
+      .fill({ color: team === "blue" ? C.blue : C.red, alpha: 0.85 });
+
+    const text = new Text({
+      text: `${team.toUpperCase()} TEAM BEGIN`,
+      style: { fill: 0xffffff, fontSize: 64, fontWeight: "bold", fontFamily: "Allerta Stencil" },
+    });
+    text.anchor.set(0.5);
+    text.position.set(w / 2, h / 2);
+
+    banner.addChild(blocker, bg, text);
+    banner.alpha = 0;
+    this.addChild(banner);
+
+    await animate(banner as Container, { alpha: 1 }, { duration: 0.3 });
+    await waitFor(1.5);
+    await animate(banner as Container, { alpha: 0 }, { duration: 0.3 });
+    banner.destroy();
   }
 
   /** Prepare the screen just before showing */
@@ -306,6 +350,7 @@ export class MainScreen extends Container {
     this.createGrid();
     this.placeUnits();
     this.updateUnitInteractivity();
+    this.showTurnBanner(this.currentTurn);
   }
 
   /** Show screen with animations */

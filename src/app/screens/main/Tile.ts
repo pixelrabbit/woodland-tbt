@@ -120,7 +120,7 @@ export class Tile extends Container {
         style: {
           fontSize: 10,
           fill: 0xffffff,
-          fontFamily: "Arial",
+          fontFamily: "Allerta Stencil",
         },
       });
       coordinatesText.anchor.set(1, 1);

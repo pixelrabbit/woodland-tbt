@@ -34,7 +34,7 @@ class BattlePanel extends Container {
     this.unitSprite.height = 300;
     this.addChild(this.unitSprite);
 
-    const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Arial" };
+    const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Allerta Stencil" };
 
     this.typeText = new Text({
       text: "Type:",
