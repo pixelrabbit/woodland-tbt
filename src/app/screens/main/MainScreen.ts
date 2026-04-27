@@ -4,7 +4,7 @@ import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
-import { Infantry, Commando, Tank } from "./units/Unit";
+import { Infantry, Commando, Tank, Recon } from "./units/Unit";
 import { Unit } from "./units/Unit";
 import { BattleModal } from "./Battle";
 import { C } from "../../common";
@@ -148,6 +148,7 @@ export class MainScreen extends Container {
       { type: Infantry, x: 11, y: 6 },
       { type: Commando, x: 12, y: 5 },
       { type: Tank, x: 11, y: 5 },
+      { type: Recon, x: 10, y: 6 },
     ];
 
     const red = [
@@ -155,10 +156,11 @@ export class MainScreen extends Container {
       { type: Infantry, x: 16, y: 6 },
       { type: Commando, x: 14, y: 5 },
       { type: Tank, x: 15, y: 5 },
+      { type: Recon, x: 17, y: 6 },
     ];
 
     const placeTeamUnits = (
-      team: { type: typeof Infantry | typeof Commando | typeof Tank; x: number; y: number }[],
+      team: { type: typeof Infantry | typeof Commando | typeof Tank | typeof Recon; x: number; y: number }[],
       color: number,
       teamName: "blue" | "red"
     ) => {
@@ -173,6 +175,9 @@ export class MainScreen extends Container {
             break;
           case Tank:
             unit = new Tank(x, y);
+            break;
+          case Recon:
+            unit = new Recon(x, y);
             break;
           case Infantry:
           default:

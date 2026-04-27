@@ -8,6 +8,7 @@ export enum U {
   Infantry = "infantry",
   Commando = "commando",
   tank = "tank",
+  recon = "recon",
 }
 
 interface IUnit {
@@ -28,6 +29,7 @@ export const UNIT: Record<U, IUnit> = {
       infantry: { primary: 0, secondary: 55 },
       commando: { primary: 0, secondary: 45 },
       tank: { primary: 0, secondary: 5 },
+      recon: { primary: 0, secondary: 12 },
     },
   },
   commando: {
@@ -39,6 +41,7 @@ export const UNIT: Record<U, IUnit> = {
       infantry: { primary: 0, secondary: 65 },
       commando: { primary: 0, secondary: 55 },
       tank: { primary: 55, secondary: 6 },
+      recon: { primary: 0, secondary: 20 },
     },
   },
   tank: {
@@ -50,6 +53,19 @@ export const UNIT: Record<U, IUnit> = {
       infantry: { primary: 35, secondary: 75 },
       commando: { primary: 30, secondary: 70 },
       tank: { primary: 55, secondary: 6 },
+      recon: { primary: 45, secondary: 65 },
+    },
+  },
+  recon: {
+    health: 100,
+    moveType: "tires",
+    moveRange: 6,
+    attackRange: 2,
+    damage: {
+      infantry: { primary: 0, secondary: 70 },
+      commando: { primary: 0, secondary: 65 },
+      tank: { primary: 0, secondary: 6 },
+      recon: { primary: 0, secondary: 35 },
     },
   },
 };
@@ -324,5 +340,12 @@ export class Tank extends Unit {
   constructor(x: number, y: number) {
     // Call the parent Unit constructor, passing the tank type and texture
     super(U.tank, x, y, tankSprite);
+  }
+}
+
+const reconSprite = await Assets.load("assets/main/recon.png");
+export class Recon extends Unit {
+  constructor(x: number, y: number) {
+    super(U.recon, x, y, reconSprite);
   }
 }
