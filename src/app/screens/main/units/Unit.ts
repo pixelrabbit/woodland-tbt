@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text } from "pixi.js";
+import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text, Assets } from "pixi.js";
 import { animate } from "motion";
 import { Tile } from "../Tile";
 import { getReachableTiles, getAttackableTiles } from "../../../utils/coordinates";
@@ -7,7 +7,7 @@ import { C } from "../../../common";
 export enum U {
   Infantry = "infantry",
   Commando = "commando",
-  tankLight = "tankLight",
+  tank = "tank",
 }
 
 interface IUnit {
@@ -27,7 +27,7 @@ export const UNIT: Record<U, IUnit> = {
     damage: {
       infantry: { primary: 0, secondary: 55 },
       commando: { primary: 0, secondary: 45 },
-      tankLight: { primary: 0, secondary: 5 },
+      tank: { primary: 0, secondary: 5 },
     },
   },
   commando: {
@@ -38,10 +38,10 @@ export const UNIT: Record<U, IUnit> = {
     damage: {
       infantry: { primary: 0, secondary: 65 },
       commando: { primary: 0, secondary: 55 },
-      tankLight: { primary: 55, secondary: 6 },
+      tank: { primary: 55, secondary: 6 },
     },
   },
-  tankLight: {
+  tank: {
     health: 100,
     moveType: "treads",
     moveRange: 4,
@@ -49,7 +49,7 @@ export const UNIT: Record<U, IUnit> = {
     damage: {
       infantry: { primary: 35, secondary: 75 },
       commando: { primary: 30, secondary: 70 },
-      tankLight: { primary: 55, secondary: 6 },
+      tank: { primary: 55, secondary: 6 },
     },
   },
 };
@@ -300,5 +300,29 @@ export class Unit extends Container {
         },
       }
     );
+  }
+}
+
+const infantrySprite = await Assets.load("assets/main/soldier.png");
+export class Infantry extends Unit {
+  constructor(x: number, y: number) {
+    // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
+    super(U.Infantry, x, y, infantrySprite);
+  }
+}
+
+const commandoSprite = await Assets.load("assets/main/commando.png");
+export class Commando extends Unit {
+  constructor(x: number, y: number) {
+    // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
+    super(U.Commando, x, y, commandoSprite);
+  }
+}
+
+const tankSprite = await Assets.load("assets/main/tank.png");
+export class Tank extends Unit {
+  constructor(x: number, y: number) {
+    // Call the parent Unit constructor, passing the tank type and texture
+    super(U.tank, x, y, tankSprite);
   }
 }

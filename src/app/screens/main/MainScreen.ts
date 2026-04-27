@@ -4,9 +4,7 @@ import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
-import { Infantry } from "./units/Infantry";
-import { Commando } from "./units/Commando";
-import { LightTank } from "./units/LightTank";
+import { Infantry, Commando, Tank } from "./units/Unit";
 import { Unit } from "./units/Unit";
 import { BattleModal } from "./Battle";
 import { C } from "../../common";
@@ -149,18 +147,18 @@ export class MainScreen extends Container {
       { type: Infantry, x: 12, y: 6 },
       { type: Infantry, x: 11, y: 6 },
       { type: Commando, x: 12, y: 5 },
-      { type: LightTank, x: 11, y: 5 },
+      { type: Tank, x: 11, y: 5 },
     ];
 
     const red = [
       { type: Infantry, x: 15, y: 6 },
       { type: Infantry, x: 16, y: 6 },
       { type: Commando, x: 14, y: 5 },
-      { type: LightTank, x: 15, y: 5 },
+      { type: Tank, x: 15, y: 5 },
     ];
 
     const placeTeamUnits = (
-      team: { type: typeof Infantry | typeof Commando | typeof LightTank; x: number; y: number }[],
+      team: { type: typeof Infantry | typeof Commando | typeof Tank; x: number; y: number }[],
       color: number,
       teamName: "blue" | "red"
     ) => {
@@ -173,8 +171,8 @@ export class MainScreen extends Container {
           case Commando:
             unit = new Commando(x, y);
             break;
-          case LightTank:
-            unit = new LightTank(x, y);
+          case Tank:
+            unit = new Tank(x, y);
             break;
           case Infantry:
           default:
