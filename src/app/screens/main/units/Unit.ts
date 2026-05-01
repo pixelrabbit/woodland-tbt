@@ -9,6 +9,7 @@ export enum U {
   Commando = "commando",
   tank = "tank",
   recon = "recon",
+  artillery = "artillery",
 }
 
 interface IUnit {
@@ -30,6 +31,7 @@ export const UNIT: Record<U, IUnit> = {
       commando: { primary: 0, secondary: 45 },
       tank: { primary: 0, secondary: 5 },
       recon: { primary: 0, secondary: 12 },
+      artillery: { primary: 0, secondary: 15 },
     },
   },
   commando: {
@@ -42,6 +44,7 @@ export const UNIT: Record<U, IUnit> = {
       commando: { primary: 0, secondary: 55 },
       tank: { primary: 55, secondary: 6 },
       recon: { primary: 0, secondary: 20 },
+      artillery: { primary: 0, secondary: 25 },
     },
   },
   tank: {
@@ -54,6 +57,7 @@ export const UNIT: Record<U, IUnit> = {
       commando: { primary: 30, secondary: 70 },
       tank: { primary: 55, secondary: 6 },
       recon: { primary: 45, secondary: 65 },
+      artillery: { primary: 45, secondary: 65 },
     },
   },
   recon: {
@@ -66,6 +70,20 @@ export const UNIT: Record<U, IUnit> = {
       commando: { primary: 0, secondary: 65 },
       tank: { primary: 0, secondary: 6 },
       recon: { primary: 0, secondary: 35 },
+      artillery: { primary: 0, secondary: 45 },
+    },
+  },
+  artillery: {
+    health: 100,
+    moveType: "treads",
+    moveRange: 3,
+    attackRange: 5,
+    damage: {
+      infantry: { primary: 65, secondary: 0 },
+      commando: { primary: 60, secondary: 0 },
+      tank: { primary: 55, secondary: 0 },
+      recon: { primary: 60, secondary: 0 },
+      artillery: { primary: 55, secondary: 0 },
     },
   },
 };
@@ -347,5 +365,13 @@ const reconSprite = await Assets.load("assets/main/recon.png");
 export class Recon extends Unit {
   constructor(x: number, y: number) {
     super(U.recon, x, y, reconSprite);
+    // this.sprite.tint = 0xaaffaa; // Light green tint to differentiate it from the tank since we reused the asset
+  }
+}
+
+const artillerySprite = await Assets.load("assets/main/artillery.png");
+export class Artillery extends Unit {
+  constructor(x: number, y: number) {
+    super(U.artillery, x, y, artillerySprite);
   }
 }
