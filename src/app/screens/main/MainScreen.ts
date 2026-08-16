@@ -4,8 +4,8 @@ import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
-import { Infantry, Commando, Tank, Recon, Artillery } from "./units/Unit";
-import { Unit } from "./units/Unit";
+import { Infantry, Commando, Tank, Recon, Artillery } from "./Unit";
+import { Unit } from "./Unit";
 import { BattleModal } from "./Battle";
 import { C } from "../../common";
 

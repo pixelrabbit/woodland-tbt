@@ -1,8 +1,8 @@
 import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text, Assets } from "pixi.js";
 import { animate } from "motion";
-import { Tile } from "../Tile";
-import { getReachableTiles, getAttackableTiles } from "../../../utils/coordinates";
-import { C } from "../../../common";
+import { Tile } from "./Tile";
+import { getReachableTiles, getAttackableTiles } from "../../utils/coordinates";
+import { C } from "../../common";
 
 export enum U {
   Infantry = "infantry",
