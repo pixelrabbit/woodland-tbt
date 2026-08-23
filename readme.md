@@ -6,3 +6,5 @@
   - cannot move through other units or building
   - path should be highlight on drag
   - after move, cannot move until next turn
+- multiplayer
+  - asynchronous play
