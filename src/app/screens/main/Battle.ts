@@ -1,38 +1,43 @@
 import { Container, Graphics, Text, Sprite } from "pixi.js";
 import { animate } from "motion";
-import { engine } from "../../getEngine";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
-import { Unit, UNIT } from "./units/Unit";
-import { Tile, TILE_DATA } from "./Tile";
+import { Unit, UNIT } from "./Unit";
+import { Tile, TILE_DATA, TileType } from "./Tile";
 
-class BattlePanel extends Container {
+export const BATTLE_WIDTH = 1200;
+export const BATTLE_HEIGHT = 800;
+export const PANEL_WIDTH = BATTLE_WIDTH / 2;
+export const PANEL_HEIGHT = BATTLE_HEIGHT;
+
+class BattleModal extends Container {
   public bg: Graphics;
   public typeText: Text;
   public healthText: Text;
   public terrainText: Text;
   public defenseText: Text;
-  public unitSprite: Sprite;
+  public unitSprites: Sprite[] = [];
   public bgColor = 0x000000;
+  private currentNumSprites = 1;
+  private originalTint: number = 0xffffff;
+  private currentHealth: number = 0;
+  private targetHealth: number = 0;
+  private currentTerrain: TileType = TileType.P;
 
   constructor() {
     super();
 
-    const stageWidth = engine().renderer.width;
-    const stageHeight = engine().renderer.height;
-    const modalWidth = stageWidth / 2;
-
-    this.bg = new Graphics().rect(0, 0, modalWidth, stageHeight).fill({ alpha: 0.95 });
+    this.bg = new Graphics().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ alpha: 0.95 });
     this.addChild(this.bg);
 
-    const centerX = modalWidth / 2;
+    for (let i = 0; i < 3; i++) {
+      const sprite = new Sprite();
+      sprite.anchor.set(0.5);
+      this.unitSprites.push(sprite);
+      this.addChild(sprite);
+    }
 
-    this.unitSprite = new Sprite();
-    this.unitSprite.anchor.set(0.5);
-    this.unitSprite.position.set(centerX, stageHeight / 2);
-    this.unitSprite.width = 300;
-    this.unitSprite.height = 300;
-    this.addChild(this.unitSprite);
+    const centerX = PANEL_WIDTH / 2;
 
     const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Allerta Stencil" };
 
@@ -60,41 +65,182 @@ class BattlePanel extends Container {
     this.addChild(this.defenseText);
   }
 
-  public update(unit: Unit) {
-    const tile = unit.parent as Tile;
+  private removedSpritesToAnimate: Sprite[] = [];
+
+  public update(unit: Unit, initialize: boolean = false) {
+    if (initialize) {
+      this.removedSpritesToAnimate = [];
+      this.currentHealth = unit.health;
+    }
+    this.targetHealth = unit.health;
 
     this.typeText.text = `Unit: ${unit.unitType.toUpperCase()}`;
-    this.healthText.text = `Health: ${unit.health}`;
-    this.terrainText.text = `Terrain: ${tile.tileType.toUpperCase()}`;
-    this.defenseText.text = `Defense: ${TILE_DATA[tile.tileType].defense}`;
-    if (unit.sprite.texture) this.unitSprite.texture = unit.sprite.texture;
+
+    if (initialize) {
+      this.healthText.text = `Health: ${Math.floor(this.currentHealth)}`;
+    }
+
+    const tile = unit.parent as Tile | undefined;
+    if (tile && tile.tileType && TILE_DATA[tile.tileType]) {
+      this.currentTerrain = tile.tileType;
+      this.terrainText.text = `Terrain: ${tile.tileType.toUpperCase()}`;
+      this.defenseText.text = `Defense: ${TILE_DATA[tile.tileType].defense}`;
+    }
+
+    if (unit.sprite) {
+      this.originalTint = unit.sprite.tint;
+    }
+
+    let numSprites = 1;
+    if (unit.health > 66) numSprites = 3;
+    else if (unit.health > 33) numSprites = 2;
+
+    const previousNumSprites = this.currentNumSprites;
+    this.currentNumSprites = numSprites;
+
+    if (!initialize && numSprites < previousNumSprites) {
+      for (let i = numSprites; i < previousNumSprites; i++) {
+        this.removedSpritesToAnimate.push(this.unitSprites[i]);
+      }
+    }
+
+    this.unitSprites.forEach((sprite, index) => {
+      if (unit.sprite && unit.sprite.texture) {
+        sprite.texture = unit.sprite.texture;
+        sprite.tint = this.originalTint;
+      }
+      if (index < numSprites) {
+        sprite.visible = true;
+        sprite.alpha = 1;
+      } else if (!this.removedSpritesToAnimate.includes(sprite)) {
+        sprite.visible = false;
+        sprite.alpha = 0;
+      }
+    });
+
+    const isAnimatingDamage = !initialize && this.removedSpritesToAnimate.length > 0;
+    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT, isAnimatingDamage);
 
     this.bgColor = unit.team === "blue" ? C.blue : C.red;
-    this.bg
-      .clear()
-      .rect(0, 0, engine().renderer.width / 2, engine().renderer.height)
-      .fill({ color: this.bgColor, alpha: 0.9 });
+    this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor, alpha: 0.9 });
+  }
+
+  private getSpritePosition(index: number, total: number, width: number, height: number, terrain: TileType) {
+    const spacingX = width / (total + 1);
+    const x = spacingX * (index + 1);
+    let y = height / 2;
+
+    switch (terrain) {
+      case TileType.M: // Mountain
+        y = height / 2 + (index % 2 === 0 ? -30 : 30);
+        break;
+      case TileType.F: // Forest
+        y = height / 2 + (index === 1 ? -40 : 20);
+        break;
+      case TileType.C: // City
+        y = height / 2 + (index % 2 === 0 ? 20 : -20);
+        break;
+      case TileType.W: // Water
+        y = height / 2 + (index * 15 - 15);
+        break;
+      case TileType.P: // Plain
+      default:
+        // Default horizontal
+        break;
+    }
+    return { x, y };
+  }
+
+  private positionSprites(modalWidth: number, height: number, animated = false) {
+    const spriteSize = Math.min(200, modalWidth / this.currentNumSprites);
+    let visibleIndex = 0;
+    this.unitSprites.forEach((sprite, index) => {
+      if (index < this.currentNumSprites) {
+        const { x: targetX, y: targetY } = this.getSpritePosition(
+          visibleIndex,
+          this.currentNumSprites,
+          modalWidth,
+          height,
+          this.currentTerrain
+        );
+        if (animated) {
+          animate(
+            sprite as Container,
+            { x: targetX, y: targetY, width: spriteSize, height: spriteSize },
+            { duration: 0.5 }
+          );
+        } else {
+          sprite.width = spriteSize;
+          sprite.height = spriteSize;
+          sprite.position.set(targetX, targetY);
+        }
+        visibleIndex++;
+      }
+    });
   }
 
   public async animateDamage(damageAmount: number) {
-    let blinkCount = 1;
-    if (damageAmount > 50) blinkCount = 3;
-    else if (damageAmount > 25) blinkCount = 2;
+    const promises: Promise<void>[] = [];
+    const centerX = PANEL_WIDTH / 2;
 
-    for (let i = 0; i < blinkCount; i++) {
-      this.unitSprite.tint = 0xff0000;
-      await waitFor(0.1);
-      this.unitSprite.tint = 0xffffff;
-      if (i < blinkCount - 1) await waitFor(0.1);
+    const damageText = new Text({
+      text: `-${Math.floor(damageAmount)}`,
+      style: { fill: 0xff0000, fontSize: 48, fontFamily: "Allerta Stencil", fontWeight: "bold" },
+    });
+    damageText.anchor.set(0.5);
+    const startY = PANEL_HEIGHT / 2 - 50;
+    damageText.position.set(centerX + 80, startY);
+    this.addChild(damageText);
+
+    promises.push(
+      (async () => {
+        await animate(damageText as Container, { y: [startY, startY - 100], alpha: [1, 0] }, { duration: 1.0 });
+        damageText.destroy();
+      })()
+    );
+
+    const startHealth = this.currentHealth;
+    const endHealth = this.targetHealth;
+    promises.push(
+      (async () => {
+        const steps = 20;
+        const stepTime = 1.0 / steps;
+        for (let i = 1; i <= steps; i++) {
+          this.currentHealth = startHealth + (endHealth - startHealth) * (i / steps);
+          this.healthText.text = `Health: ${Math.floor(this.currentHealth)}`;
+          await waitFor(stepTime);
+        }
+        this.currentHealth = endHealth;
+        this.healthText.text = `Health: ${Math.floor(this.currentHealth)}`;
+      })()
+    );
+
+    for (const sprite of this.removedSpritesToAnimate) {
+      const distLeft = sprite.x;
+      const distRight = PANEL_WIDTH - sprite.x;
+      const targetX = distLeft < distRight ? -sprite.width : PANEL_WIDTH + sprite.width;
+
+      promises.push(
+        (async () => {
+          await animate(sprite as Container, { x: [sprite.x, targetX], alpha: [1, 0] }, { duration: 0.5 });
+          sprite.visible = false;
+        })()
+      );
+    }
+    this.removedSpritesToAnimate = [];
+
+    if (promises.length > 0) {
+      await Promise.all(promises);
+    } else {
+      await waitFor(0.5);
     }
   }
 
-  public resize(width: number, height: number) {
-    const modalWidth = width / 2;
-    this.bg.clear().rect(0, 0, modalWidth, height).fill({ color: this.bgColor, alpha: 0.9 });
+  public resize() {
+    this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor, alpha: 0.9 });
 
-    const centerX = modalWidth / 2;
-    this.unitSprite.position.set(centerX, height / 2);
+    const centerX = PANEL_WIDTH / 2;
+    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
     this.typeText.position.set(centerX, 80);
     this.healthText.position.set(centerX, 140);
     this.terrainText.position.set(centerX, 180);
@@ -102,56 +248,91 @@ class BattlePanel extends Container {
   }
 }
 
-export class BattleModal extends Container {
-  private attackerPanel: BattlePanel;
-  private targetPanel: BattlePanel;
+export class BattlePane extends Container {
+  private panelContainer: Container;
+  private blockerBg: Graphics;
+  private attackerModal: BattleModal;
+  private targetModal: BattleModal;
   private currentShowId = 0;
   private attackerOnLeft = true;
+  private panelBaseX = 0;
+  private panelBaseY = 0;
 
   constructor() {
     super();
 
-    this.attackerPanel = new BattlePanel();
-    this.targetPanel = new BattlePanel();
+    this.blockerBg = new Graphics();
+    this.blockerBg.eventMode = "static";
+    this.addChild(this.blockerBg);
 
-    this.addChild(this.attackerPanel);
-    this.addChild(this.targetPanel);
+    this.panelContainer = new Container();
+    this.addChild(this.panelContainer);
+
+    this.attackerModal = new BattleModal();
+    this.targetModal = new BattleModal();
+
+    this.panelContainer.addChild(this.attackerModal);
+    this.panelContainer.addChild(this.targetModal);
 
     // Block clicks from passing through the modal to the game board
     this.eventMode = "static";
     this.visible = false;
+    this.alpha = 1;
   }
 
   public async battle(attacker: Unit, target: Unit) {
     const showId = ++this.currentShowId;
 
     // figure out if attacker is left or right
-    const attackerTile = attacker.parent as Tile;
-    const targetTile = target.parent as Tile;
-    this.attackerOnLeft = attackerTile.gridX <= targetTile.gridX;
+    const attackerTile = attacker.parent as Tile | undefined;
+    const targetTile = target.parent as Tile | undefined;
+    if (attackerTile && targetTile) {
+      this.attackerOnLeft = attackerTile.gridX <= targetTile.gridX;
+    }
 
-    // position panels based on direction
-    const halfWidth = engine().renderer.width / 2;
-    this.attackerPanel.x = this.attackerOnLeft ? 0 : halfWidth;
-    this.targetPanel.x = this.attackerOnLeft ? halfWidth : 0;
+    const leftModal = this.attackerOnLeft ? this.attackerModal : this.targetModal;
+    const rightModal = this.attackerOnLeft ? this.targetModal : this.attackerModal;
 
-    this.attackerPanel.update(attacker);
-    this.targetPanel.update(target);
+    this.attackerModal.update(attacker, true);
+    this.targetModal.update(target, true);
 
-    this.alpha = 0;
+    // Determine offscreen starting positions
+    const offscreenWidth = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
+    const offscreenLeft = -offscreenWidth;
+    const offscreenRight = PANEL_WIDTH + offscreenWidth;
+
+    leftModal.x = offscreenLeft;
+    rightModal.x = offscreenRight;
+
+    // Reset panel container transform and visibility
+    this.panelContainer.x = this.panelBaseX;
+    this.panelContainer.y = this.panelBaseY;
+    this.panelContainer.alpha = 1;
+
+    this.alpha = 1;
     this.visible = true;
 
-    await animate(this as Container, { alpha: 1 }, { duration: 0.3 });
+    // Animate blocker fade-in and panes sliding in from left and right
+    await Promise.all([
+      animate(this.blockerBg as Container, { alpha: [0, 0.5] }, { duration: 0.25 }),
+      animate(leftModal as Container, { x: [offscreenLeft, 0] }, { duration: 0.35, ease: "easeOut" }),
+      animate(rightModal as Container, { x: [offscreenRight, PANEL_WIDTH] }, { duration: 0.35, ease: "easeOut" }),
+    ]);
 
-    // initial
-    this.executeStrike(attacker, target, this.targetPanel);
+    // Shake the modal upon collision
+    await this.shake(18, 0.3);
+
+    await waitFor(0.2);
+
+    // initial strike
+    await this.executeStrike(attacker, target, this.targetModal);
 
     // pause
     await waitFor(1);
 
-    // counter
+    // counter strike
     if (target.health > 0) {
-      this.executeStrike(target, attacker, this.attackerPanel);
+      await this.executeStrike(target, attacker, this.attackerModal);
     }
 
     await waitFor(2);
@@ -161,40 +342,80 @@ export class BattleModal extends Container {
     }
   }
 
-  private executeStrike(source: Unit, target: Unit, targetPanel: BattlePanel) {
+  private async shake(intensity = 18, duration = 0.3) {
+    const baseX = this.panelBaseX;
+    const baseY = this.panelBaseY;
+    const steps = 10;
+    const stepDuration = duration / steps;
+    for (let i = 0; i < steps; i++) {
+      const decay = (steps - i) / steps;
+      const dir = i % 2 === 0 ? 1 : -1;
+      const offsetX = dir * intensity * decay * (0.6 + Math.random() * 0.4);
+      const offsetY = (Math.random() * 2 - 1) * (intensity * 0.4) * decay;
+      this.panelContainer.x = baseX + offsetX;
+      this.panelContainer.y = baseY + offsetY;
+      await waitFor(stepDuration);
+    }
+    this.panelContainer.x = baseX;
+    this.panelContainer.y = baseY;
+  }
+
+  private async executeStrike(source: Unit, target: Unit, targetModal: BattleModal) {
     const sourceType = source.unitType;
     const targetType = target.unitType;
 
     // get damage based on damage rating by unit
-    const damageTable = UNIT[sourceType].damage[targetType];
+    const damageTable = UNIT[sourceType]?.damage?.[targetType];
+    if (!damageTable) return;
     const maxDamage = Math.max(damageTable.primary, damageTable.secondary);
 
     //reduce damage by tile defense rating
-    const targetTile = target.parent as Tile;
-    const defenseRating = TILE_DATA[targetTile.tileType].defense;
+    const targetTile = target.parent as Tile | undefined;
+    const defenseRating = (targetTile && TILE_DATA[targetTile.tileType]?.defense) ?? 0;
     const defenseMultiplier = Math.max(0, 1 - defenseRating * 0.1); // 10% reduction per defense point
     const damageDealt = Math.floor((source.health / 100) * maxDamage * defenseMultiplier);
 
     // reduce unit health
     target.health = Math.max(0, target.health - damageDealt);
-    targetPanel.update(target);
+    targetModal.update(target);
 
     if (damageDealt > 0) {
-      targetPanel.animateDamage(damageDealt);
+      await targetModal.animateDamage(damageDealt);
     }
   }
 
   public async hide() {
-    await animate(this as Container, { alpha: 0 }, { duration: 0.3 });
+    const offscreenWidth = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
+    const offscreenLeft = -offscreenWidth;
+    const offscreenRight = PANEL_WIDTH + offscreenWidth;
+
+    const leftModal = this.attackerOnLeft ? this.attackerModal : this.targetModal;
+    const rightModal = this.attackerOnLeft ? this.targetModal : this.attackerModal;
+
+    await Promise.all([
+      animate(leftModal as Container, { x: [0, offscreenLeft] }, { duration: 0.3, ease: "easeIn" }),
+      animate(rightModal as Container, { x: [PANEL_WIDTH, offscreenRight] }, { duration: 0.3, ease: "easeIn" }),
+      animate(this.blockerBg as Container, { alpha: [0.5, 0] }, { duration: 0.3 }),
+    ]);
+
     this.visible = false;
+    this.blockerBg.alpha = 0;
   }
 
   public resize(width: number, height: number) {
-    this.attackerPanel.resize(width, height);
-    this.targetPanel.resize(width, height);
+    this.blockerBg.clear().rect(0, 0, width, height).fill({ color: 0x000000, alpha: 0.5 });
 
-    const halfWidth = width / 2;
-    this.attackerPanel.x = this.attackerOnLeft ? 0 : halfWidth;
-    this.targetPanel.x = this.attackerOnLeft ? halfWidth : 0;
+    this.panelBaseX = (width - BATTLE_WIDTH) / 2;
+    this.panelBaseY = (height - BATTLE_HEIGHT) / 2;
+    this.panelContainer.x = this.panelBaseX;
+    this.panelContainer.y = this.panelBaseY;
+
+    this.attackerModal.resize();
+    this.targetModal.resize();
+
+    if (!this.visible) {
+      this.attackerModal.x = this.attackerOnLeft ? 0 : PANEL_WIDTH;
+      this.targetModal.x = this.attackerOnLeft ? PANEL_WIDTH : 0;
+    }
   }
 }

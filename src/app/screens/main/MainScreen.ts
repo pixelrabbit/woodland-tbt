@@ -4,9 +4,9 @@ import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
 import { Tile, TileType } from "./Tile";
-import { Infantry, Commando, Tank, Recon, Artillery } from "./units/Unit";
-import { Unit } from "./units/Unit";
-import { BattleModal } from "./Battle";
+import { Infantry, Commando, Tank, Recon, Artillery } from "./Unit";
+import { Unit } from "./Unit";
+import { BattlePane } from "./Battle";
 import { C } from "../../common";
 
 /** The screen that holds the app */
@@ -23,7 +23,7 @@ export class MainScreen extends Container {
   private endTurnButton!: Container;
   private turnText!: Text;
   private hudBg!: Graphics;
-  private battleModal!: BattleModal;
+  private battlePane!: BattlePane;
 
   constructor() {
     super();
@@ -43,9 +43,9 @@ export class MainScreen extends Container {
     this.createUI();
     this.updateUnitInteractivity();
 
-    this.battleModal = new BattleModal();
+    this.battlePane = new BattlePane();
 
-    this.addChild(this.battleModal);
+    this.addChild(this.battlePane);
   }
 
   private createUI() {
@@ -198,7 +198,7 @@ export class MainScreen extends Container {
         this.allUnits.push(unit);
         unit.on("moved", () => this.onUnitMoved());
         unit.on("attack", (attacker: Unit, target: Unit) => {
-          this.battleModal.battle(attacker, target);
+          this.battlePane.battle(attacker, target);
           this.updateUnitInteractivity();
         });
 
@@ -332,8 +332,8 @@ export class MainScreen extends Container {
       this.endTurnButton.y = height - 70;
     }
 
-    if (this.battleModal) {
-      this.battleModal.resize(width, height);
+    if (this.battlePane) {
+      this.battlePane.resize(width, height);
     }
   }
 

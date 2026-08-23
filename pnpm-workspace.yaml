@@ -1,0 +1,4 @@
+allowBuilds:
+  cpu-features: true
+  esbuild: true
+  sharp: true

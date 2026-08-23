@@ -1,5 +1,5 @@
 import { Tile, TileType } from "../screens/main/Tile";
-import { Unit } from "../screens/main/units/Unit";
+import { Unit } from "../screens/main/Unit";
 
 /**
  * Returns an array of Tile objects matching the provided coordinates.
