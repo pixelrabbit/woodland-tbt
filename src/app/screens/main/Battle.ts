@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Sprite, Assets } from "pixi.js";
+import { Container, Graphics, Text, Sprite, Assets, Texture } from "pixi.js";
 import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
@@ -13,6 +13,13 @@ export const BORDER_WIDTH = 8;
 
 const bgPlain = await Assets.load("assets/main/pane-grass.png");
 const bgForest = await Assets.load("assets/main/pane-forest.png");
+const bgMountain = await Assets.load("assets/main/pane-mountain.png");
+
+const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
+  [TileType.P]: bgPlain,
+  [TileType.F]: bgForest,
+  [TileType.M]: bgMountain,
+};
 
 class BattleModal extends Container {
   public bg: Graphics;
@@ -30,6 +37,7 @@ class BattleModal extends Container {
   private _currentHealth: number = 0;
   private targetHealth: number = 0;
   private currentTerrain: TileType = TileType.P;
+  private isFlipped = false;
 
   get currentHealth(): number {
     return this._currentHealth;
@@ -42,6 +50,23 @@ class BattleModal extends Container {
     }
   }
 
+  public setFlipped(flipped: boolean) {
+    this.isFlipped = flipped;
+    this.updateBgLayout();
+  }
+
+  private updateBgLayout() {
+    this.bgSprite.width = PANEL_WIDTH;
+    this.bgSprite.height = PANEL_HEIGHT;
+    if (this.isFlipped) {
+      this.bgSprite.scale.x = -Math.abs(this.bgSprite.scale.x);
+      this.bgSprite.x = PANEL_WIDTH;
+    } else {
+      this.bgSprite.scale.x = Math.abs(this.bgSprite.scale.x);
+      this.bgSprite.x = 0;
+    }
+  }
+
   constructor() {
     super();
 
@@ -49,8 +74,7 @@ class BattleModal extends Container {
     this.addChild(this.bg);
 
     this.bgSprite = new Sprite(bgPlain);
-    this.bgSprite.width = PANEL_WIDTH;
-    this.bgSprite.height = PANEL_HEIGHT;
+    this.updateBgLayout();
     this.addChild(this.bgSprite);
 
     this.border = new Graphics()
@@ -156,17 +180,12 @@ class BattleModal extends Container {
       .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
 
-    if (this.currentTerrain === TileType.P) {
-      this.bgSprite.texture = bgPlain;
-      this.bgSprite.visible = true;
-      this.bg.visible = false;
-    } else if (this.currentTerrain === TileType.F) {
-      this.bgSprite.texture = bgForest;
-      this.bgSprite.visible = true;
-      this.bg.visible = false;
-    } else {
-      this.bgSprite.visible = false;
-      this.bg.visible = true;
+    const bgTexture = TERRAIN_BG[this.currentTerrain];
+    this.bgSprite.visible = !!bgTexture;
+    this.bg.visible = !bgTexture;
+    if (bgTexture) {
+      this.bgSprite.texture = bgTexture;
+      this.updateBgLayout();
     }
   }
 
@@ -281,8 +300,7 @@ class BattleModal extends Container {
 
   public resize() {
     this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
-    this.bgSprite.width = PANEL_WIDTH;
-    this.bgSprite.height = PANEL_HEIGHT;
+    this.updateBgLayout();
     this.border
       .clear()
       .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
@@ -304,6 +322,21 @@ export class BattlePane extends Container {
   private attackerOnLeft = true;
   private panelBaseX = 0;
   private panelBaseY = 0;
+
+  private get panes() {
+    return {
+      left: this.attackerOnLeft ? this.attackerModal : this.targetModal,
+      right: this.attackerOnLeft ? this.targetModal : this.attackerModal,
+    };
+  }
+
+  private getOffscreenPositions() {
+    const width = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
+    return {
+      left: -width,
+      right: PANEL_WIDTH + width,
+    };
+  }
 
   constructor() {
     super();
@@ -337,19 +370,17 @@ export class BattlePane extends Container {
       this.attackerOnLeft = attackerTile.gridX <= targetTile.gridX;
     }
 
-    const leftPane = this.attackerOnLeft ? this.attackerModal : this.targetModal;
-    const rightPane = this.attackerOnLeft ? this.targetModal : this.attackerModal;
+    const { left: leftPane, right: rightPane } = this.panes;
+    const offscreen = this.getOffscreenPositions();
+
+    leftPane.setFlipped(false);
+    rightPane.setFlipped(true);
 
     this.attackerModal.update(attacker, true);
     this.targetModal.update(target, true);
 
-    // Determine offscreen starting positions
-    const offscreenWidth = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
-    const offscreenLeft = -offscreenWidth;
-    const offscreenRight = PANEL_WIDTH + offscreenWidth;
-
-    leftPane.x = offscreenLeft;
-    rightPane.x = offscreenRight;
+    leftPane.x = offscreen.left;
+    rightPane.x = offscreen.right;
     leftPane.alpha = 0;
     rightPane.alpha = 0;
 
@@ -364,10 +395,10 @@ export class BattlePane extends Container {
     // Animate blocker fade-in and panes sliding/fading in from left and right
     await Promise.all([
       animate(this.blockerBg as Container, { alpha: [0, 0.5] }, { duration: 0.25 }),
-      animate(leftPane as Container, { x: [offscreenLeft, 0], alpha: [0, 1] }, { duration: 0.35, ease: "easeOut" }),
+      animate(leftPane as Container, { x: [offscreen.left, 0], alpha: [0, 1] }, { duration: 0.35, ease: "easeOut" }),
       animate(
         rightPane as Container,
-        { x: [offscreenRight, PANEL_WIDTH], alpha: [0, 1] },
+        { x: [offscreen.right, PANEL_WIDTH], alpha: [0, 1] },
         { duration: 0.35, ease: "easeOut" }
       ),
     ]);
@@ -438,18 +469,14 @@ export class BattlePane extends Container {
   }
 
   public async hide() {
-    const offscreenWidth = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
-    const offscreenLeft = -offscreenWidth;
-    const offscreenRight = PANEL_WIDTH + offscreenWidth;
-
-    const leftPane = this.attackerOnLeft ? this.attackerModal : this.targetModal;
-    const rightPane = this.attackerOnLeft ? this.targetModal : this.attackerModal;
+    const { left: leftPane, right: rightPane } = this.panes;
+    const offscreen = this.getOffscreenPositions();
 
     await Promise.all([
-      animate(leftPane as Container, { x: [0, offscreenLeft], alpha: [1, 0] }, { duration: 0.3, ease: "easeIn" }),
+      animate(leftPane as Container, { x: [0, offscreen.left], alpha: [1, 0] }, { duration: 0.3, ease: "easeIn" }),
       animate(
         rightPane as Container,
-        { x: [PANEL_WIDTH, offscreenRight], alpha: [1, 0] },
+        { x: [PANEL_WIDTH, offscreen.right], alpha: [1, 0] },
         { duration: 0.3, ease: "easeIn" }
       ),
       animate(this.blockerBg as Container, { alpha: [0.5, 0] }, { duration: 0.3 }),
@@ -471,8 +498,11 @@ export class BattlePane extends Container {
     this.targetModal.resize();
 
     if (!this.visible) {
-      this.attackerModal.x = this.attackerOnLeft ? 0 : PANEL_WIDTH;
-      this.targetModal.x = this.attackerOnLeft ? PANEL_WIDTH : 0;
+      const { left, right } = this.panes;
+      left.x = 0;
+      right.x = PANEL_WIDTH;
+      left.setFlipped(false);
+      right.setFlipped(true);
     }
   }
 }
