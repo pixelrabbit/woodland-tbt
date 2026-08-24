@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Sprite, Assets, Texture, ColorMatrixFilter } from "pixi.js";
+import { Container, Graphics, Text, Sprite, Assets, Texture, ColorMatrixFilter, type ColorSource } from "pixi.js";
 import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
@@ -7,18 +7,20 @@ import { Tile, TILE_DATA, TileType } from "./Tile";
 
 export const BATTLE_WIDTH = 1200;
 export const BATTLE_HEIGHT = 800;
-export const PANEL_WIDTH = BATTLE_WIDTH / 2;
+export const PANE_WIDTH = BATTLE_WIDTH / 2;
 export const PANEL_HEIGHT = BATTLE_HEIGHT;
 export const BORDER_WIDTH = 8;
 
 const bgPlain = await Assets.load("assets/main/pane-grass.png");
 const bgForest = await Assets.load("assets/main/pane-forest.png");
 const bgMountain = await Assets.load("assets/main/pane-mountain.png");
+const bgCity = await Assets.load("assets/main/pane-city.png");
 
 const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
   [TileType.P]: bgPlain,
   [TileType.F]: bgForest,
   [TileType.M]: bgMountain,
+  [TileType.C]: bgCity,
 };
 
 export interface SlotCoordinate {
@@ -119,8 +121,8 @@ class BattleModal extends Container {
   // public terrainText: Text;
   public defenseText: Text;
   public unitSprites: Sprite[] = [];
-  public bgColor = 0x000000;
-  public borderColor = 0x000000;
+  public bgColor: ColorSource = 0x000000;
+  public borderColor: ColorSource = 0x000000;
   private originalTint: number = 0xffffff;
   private _currentHealth: number = 0;
   private targetHealth: number = 0;
@@ -134,22 +136,22 @@ class BattleModal extends Container {
   set currentHealth(value: number) {
     this._currentHealth = value;
     if (this.healthText) {
-      this.healthText.text = `${Math.round(value / 10)}`;
+      this.healthText.text = `${Math.ceil(value / 10)}`;
     }
   }
 
   public setFlipped(flipped: boolean) {
     this.isFlipped = flipped;
     this.updateBgLayout();
-    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
+    this.positionSprites(PANE_WIDTH, PANEL_HEIGHT);
   }
 
   private updateBgLayout() {
-    this.bgSprite.width = PANEL_WIDTH;
+    this.bgSprite.width = PANE_WIDTH;
     this.bgSprite.height = PANEL_HEIGHT;
     if (this.isFlipped) {
       this.bgSprite.scale.x = -Math.abs(this.bgSprite.scale.x);
-      this.bgSprite.x = PANEL_WIDTH;
+      this.bgSprite.x = PANE_WIDTH;
     } else {
       this.bgSprite.scale.x = Math.abs(this.bgSprite.scale.x);
       this.bgSprite.x = 0;
@@ -159,14 +161,14 @@ class BattleModal extends Container {
   constructor() {
     super();
 
-    this.bg = new Graphics().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+    this.bg = new Graphics().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT);
     this.addChild(this.bg);
 
     this.bgSprite = new Sprite(bgPlain);
     this.updateBgLayout();
     this.addChild(this.bgSprite);
 
-    this.paneMask = new Graphics().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill(0xffffff);
+    this.paneMask = new Graphics().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT).fill(0xffffff);
     this.addChild(this.paneMask);
 
     this.unitsContainer = new Container();
@@ -174,7 +176,7 @@ class BattleModal extends Container {
     this.addChild(this.unitsContainer);
 
     this.border = new Graphics()
-      .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
+      .rect(0, 0, PANE_WIDTH, PANEL_HEIGHT)
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
     this.addChild(this.border);
 
@@ -185,9 +187,9 @@ class BattleModal extends Container {
       this.unitsContainer.addChild(sprite);
     }
 
-    const centerX = PANEL_WIDTH / 2;
+    const centerX = PANE_WIDTH / 2;
 
-    const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Allerta Stencil" };
+    const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Jersey 25" };
 
     // HEALTH
     this.healthText = new Text({
@@ -256,15 +258,15 @@ class BattleModal extends Container {
     });
 
     if (initialize) {
-      this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
+      this.positionSprites(PANE_WIDTH, PANEL_HEIGHT);
     }
 
     this.bgColor = unit.team === "blue" ? C.blue : C.red;
     this.borderColor = this.bgColor;
-    this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
+    this.bg.clear().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
     this.border
       .clear()
-      .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
+      .rect(0, 0, PANE_WIDTH, PANEL_HEIGHT)
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
 
     const bgTexture = TERRAIN_BG[this.currentTerrain];
@@ -280,7 +282,7 @@ class BattleModal extends Container {
     const terrainSlots = TERRAIN_SLOT_POSITIONS[terrain];
     if (terrainSlots && terrainSlots[index]) {
       const slot = terrainSlots[index];
-      const scaleX = width / PANEL_WIDTH;
+      const scaleX = width / PANE_WIDTH;
       const scaleY = height / PANEL_HEIGHT;
       return {
         x: slot.x * scaleX,
@@ -302,8 +304,7 @@ class BattleModal extends Container {
       const { x: baseSlotX, y: targetY } = this.getSpritePosition(index, modalWidth, height, this.currentTerrain);
       const targetX = this.isFlipped ? modalWidth - baseSlotX : baseSlotX;
 
-      sprite.width = spriteSize;
-      sprite.height = spriteSize;
+      sprite.setSize(spriteSize);
       sprite.position.set(targetX, targetY);
       if (this.isFlipped) {
         sprite.scale.x = -Math.abs(sprite.scale.x);
@@ -315,15 +316,15 @@ class BattleModal extends Container {
 
   public async animateDamage(damageAmount: number) {
     const promises: Promise<void>[] = [];
-    const centerX = PANEL_WIDTH / 2;
+    const centerX = PANE_WIDTH / 2;
 
     const damageText = new Text({
-      text: `-${Math.floor(damageAmount)}`,
-      style: { fill: 0xff0000, fontSize: 48, fontFamily: "Allerta Stencil", fontWeight: "bold" },
+      text: `-${Math.floor(damageAmount / 10)}`,
+      style: { fill: 0xffffff, fontSize: 48, fontFamily: "Jersey 25", fontWeight: "bold" },
     });
     damageText.anchor.set(0.5);
     const startY = PANEL_HEIGHT / 2 - 50;
-    damageText.position.set(centerX + 80, startY);
+    damageText.position.set(centerX, startY);
     this.addChild(damageText);
 
     promises.push(
@@ -351,7 +352,7 @@ class BattleModal extends Container {
     );
 
     for (const sprite of this.removedSpritesToAnimate) {
-      const targetX = this.isFlipped ? PANEL_WIDTH + sprite.width : -sprite.width;
+      const targetX = this.isFlipped ? PANE_WIDTH + sprite.width : -sprite.width;
 
       promises.push(
         (async () => {
@@ -370,16 +371,16 @@ class BattleModal extends Container {
   }
 
   public resize() {
-    this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
+    this.bg.clear().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
     this.updateBgLayout();
-    this.paneMask.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill(0xffffff);
+    this.paneMask.clear().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT).fill(0xffffff);
     this.border
       .clear()
-      .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
+      .rect(0, 0, PANE_WIDTH, PANEL_HEIGHT)
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
 
-    const centerX = PANEL_WIDTH / 2;
-    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
+    const centerX = PANE_WIDTH / 2;
+    this.positionSprites(PANE_WIDTH, PANEL_HEIGHT);
     this.healthText.position.set(centerX, 24);
     this.defenseText.position.set(centerX, 220);
   }
@@ -403,10 +404,10 @@ export class BattlePane extends Container {
   }
 
   private getOffscreenPositions() {
-    const width = Math.max(PANEL_WIDTH + 200, Math.abs(this.panelBaseX) + PANEL_WIDTH + 200);
+    const width = Math.max(PANE_WIDTH + 200, Math.abs(this.panelBaseX) + PANE_WIDTH + 200);
     return {
       left: -width,
-      right: PANEL_WIDTH + width,
+      right: PANE_WIDTH + width,
     };
   }
 
@@ -474,7 +475,7 @@ export class BattlePane extends Container {
       animate(leftPane as Container, { x: [offscreen.left, 0], alpha: [0, 1] }, { duration: 0.35, ease: "easeOut" }),
       animate(
         rightPane as Container,
-        { x: [offscreen.right, PANEL_WIDTH], alpha: [0, 1] },
+        { x: [offscreen.right, PANE_WIDTH], alpha: [0, 1] },
         { duration: 0.35, ease: "easeOut" }
       ),
     ]);
@@ -534,7 +535,7 @@ export class BattlePane extends Container {
       animate(leftPane as Container, { x: [0, offscreen.left], alpha: [1, 0] }, { duration: 0.3, ease: "easeIn" }),
       animate(
         rightPane as Container,
-        { x: [PANEL_WIDTH, offscreen.right], alpha: [1, 0] },
+        { x: [PANE_WIDTH, offscreen.right], alpha: [1, 0] },
         { duration: 0.3, ease: "easeIn" }
       ),
       animate(this.blockerBg as Container, { alpha: [0.5, 0] }, { duration: 0.3 }),
@@ -558,7 +559,7 @@ export class BattlePane extends Container {
     if (!this.visible) {
       const { left, right } = this.panes;
       left.x = 0;
-      right.x = PANEL_WIDTH;
+      right.x = PANE_WIDTH;
       left.setFlipped(false);
       right.setFlipped(true);
     }

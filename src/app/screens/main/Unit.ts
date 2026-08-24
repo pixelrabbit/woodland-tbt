@@ -50,7 +50,7 @@ export const UNIT: Record<U, IUnit> = {
   tank: {
     health: 100,
     moveType: "treads",
-    moveRange: 6,
+    moveRange: 5,
     attackRange: 1,
     damage: {
       infantry: { primary: 0, secondary: 75 },
@@ -108,7 +108,7 @@ export class Unit extends Container {
   private pathGraphics?: Graphics;
   hasMoved: boolean = false;
   hasAttacked: boolean = false;
-  private isDead: boolean = false;
+  public isDead: boolean = false;
   public unitType: U;
 
   get team(): "blue" | "red" {
@@ -146,8 +146,7 @@ export class Unit extends Container {
 
     this.sprite = new Sprite(texture);
     this.sprite.anchor.set(0.5);
-    this.sprite.width = 64;
-    this.sprite.height = 64;
+    this.sprite.setSize(Tile.TILE_SIZE);
     this.addChild(this.sprite);
 
     // Health indicator background (16x16 box placed at the bottom right)
@@ -155,11 +154,11 @@ export class Unit extends Container {
     this.addChild(this.healthBg);
 
     this.healthText = new Text({
-      text: Math.round(this._health / 10).toString(),
+      text: Math.ceil(this._health / 10).toString(),
       style: {
-        fontSize: 12,
+        fontSize: 16,
         fill: 0xffffff,
-        fontFamily: "Allerta Stencil",
+        fontFamily: "Jersey 25",
       },
     });
     this.healthText.anchor.set(0.5);
@@ -469,7 +468,7 @@ export class Unit extends Container {
   set health(value: number) {
     this._health = value;
     if (this.healthText) {
-      this.healthText.text = Math.round(value / 10);
+      this.healthText.text = Math.ceil(value / 10);
     }
 
     if (this._health <= 0 && !this.isDead) {

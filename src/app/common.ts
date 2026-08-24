@@ -1,4 +1,4 @@
 export const C = {
-  blue: 0x062a78,
-  red: 0x73000c,
+  blue: { h: 230, s: 100, l: 33 },
+  red: { h: 360, s: 100, l: 33 },
 };

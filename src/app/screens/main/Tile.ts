@@ -1,4 +1,6 @@
 import { Graphics, Sprite, Text, Assets, Container, Texture } from "pixi.js";
+import { animate } from "motion";
+import { C } from "../../common";
 
 export enum TileType {
   P = "plain",
@@ -26,6 +28,7 @@ const textureGrass = await Assets.load("assets/main/grass.png");
 const textureWater = await Assets.load("assets/main/water.jpg");
 const textureMountain = await Assets.load("assets/main/mountain.png");
 const textureForest = await Assets.load("assets/main/forest.png");
+const textureCity = await Assets.load("assets/main/city.png");
 
 export const TILE_DATA: Record<TileType, TileData> = {
   [TileType.P]: {
@@ -46,7 +49,7 @@ export const TILE_DATA: Record<TileType, TileData> = {
       tires: 1,
       air: 1,
     },
-    texture: textureGrass,
+    texture: textureCity,
   },
   [TileType.M]: {
     defense: 4,
@@ -85,7 +88,7 @@ export class Tile extends Container {
   public readonly id: string;
   public readonly gridX: number;
   public readonly gridY: number;
-  public static readonly TILE_SIZE = 64;
+  public static readonly TILE_SIZE = 84;
   public readonly movementCost: MovementCost;
   public static showCoordinates = false;
   private _state = "default";
@@ -110,8 +113,7 @@ export class Tile extends Container {
 
     this.sprite = new Sprite(TILE_DATA[type]?.texture || textureWater);
     this.sprite.anchor.set(0);
-    this.sprite.width = 64;
-    this.sprite.height = 64;
+    this.sprite.setSize(Tile.TILE_SIZE);
     this.addChild(this.sprite);
 
     if (Tile.showCoordinates) {
@@ -120,7 +122,7 @@ export class Tile extends Container {
         style: {
           fontSize: 10,
           fill: 0xffffff,
-          fontFamily: "Allerta Stencil",
+          fontFamily: "Jersey 25",
         },
       });
       coordinatesText.anchor.set(1, 1);
@@ -167,6 +169,10 @@ export class Tile extends Container {
       this._isHovered = false;
       this.updateVisuals();
     });
+
+    if (this.tileType === TileType.C) {
+      this.updateCaptureBoxes();
+    }
   }
 
   private updateVisuals() {
@@ -197,5 +203,99 @@ export class Tile extends Container {
   public set state(value: string) {
     this._state = value;
     this.updateVisuals();
+  }
+
+  private _owner: "blue" | "red" | null = null;
+  public capturePoints: number = 0;
+  public captureTeam: "blue" | "red" | null = null;
+  private captureBoxesGraphic?: Graphics;
+
+  public get owner(): "blue" | "red" | null {
+    return this._owner;
+  }
+
+  public set owner(value: "blue" | "red" | null) {
+    this._owner = value;
+    this.captureTeam = value;
+    this.capturePoints = value ? 2 : 0;
+    this.updateCaptureBoxes();
+  }
+
+  public setCaptureProgress(team: "blue" | "red" | null, points: number) {
+    this.captureTeam = team;
+    this.capturePoints = Math.max(0, Math.min(2, points));
+    if (this.capturePoints === 2 && this.captureTeam) {
+      this._owner = this.captureTeam;
+    } else {
+      this._owner = null;
+      if (this.capturePoints === 0) {
+        this.captureTeam = null;
+      }
+    }
+    this.updateCaptureBoxes();
+  }
+
+  public updateCaptureBoxes() {
+    if (this.tileType !== TileType.C) return;
+
+    if (!this.captureBoxesGraphic) {
+      this.captureBoxesGraphic = new Graphics();
+      this.captureBoxesGraphic.zIndex = 50;
+      this.addChild(this.captureBoxesGraphic);
+    }
+
+    const g = this.captureBoxesGraphic;
+    g.clear();
+
+    const boxSize = 12;
+    const spacing = 2;
+    const startX = 2;
+    const startY = 2;
+
+    const grayColor = { h: 0, s: 0, l: 20 };
+    const teamColor = this.captureTeam ? (this.captureTeam === "blue" ? C.blue : C.red) : grayColor;
+
+    // Box 1
+    const color1 = this.capturePoints >= 1 && this.captureTeam ? teamColor : grayColor;
+    g.rect(startX, startY, boxSize, boxSize).fill(color1);
+
+    // Box 2
+    const color2 = this.capturePoints >= 2 && this.captureTeam ? teamColor : grayColor;
+    g.rect(startX, startY + boxSize + spacing, boxSize, boxSize).fill(color2);
+  }
+
+  public async animateIncome(amount: number) {
+    const text = new Text({
+      text: `+${amount}`,
+      style: {
+        fontSize: 26,
+        fill: 0xffffff,
+        fontFamily: "Jersey 25",
+        fontWeight: "bold",
+        stroke: { color: 0x000000, width: 4 },
+      },
+    });
+    text.anchor.set(0.5);
+    const startX = Tile.TILE_SIZE / 2;
+    const startY = Tile.TILE_SIZE / 2;
+    text.position.set(startX, startY);
+    text.zIndex = 10000;
+    this.addChild(text);
+
+    // Calculate vector towards the upper-left HUD credits badge (approx screen x: 210, y: 14)
+    const localTarget = this.toLocal({ x: 210, y: 14 });
+    const dx = localTarget.x - startX;
+    const dy = localTarget.y - startY;
+    const dist = Math.hypot(dx, dy) || 1;
+    const travelDist = 80;
+    const targetX = startX + (dx / dist) * travelDist;
+    const targetY = startY + (dy / dist) * travelDist;
+
+    await animate(
+      text as Container,
+      { x: [startX, targetX], y: [startY, targetY], alpha: [1, 0] },
+      { duration: 1.2, ease: "easeOut" }
+    );
+    text.destroy();
   }
 }

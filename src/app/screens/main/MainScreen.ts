@@ -7,6 +7,7 @@ import { Tile, TileType } from "./Tile";
 import { Infantry, Commando, Tank, Recon, Artillery } from "./Unit";
 import { Unit } from "./Unit";
 import { BattlePane } from "./Battle";
+import { Hud } from "./HUD";
 import { C } from "../../common";
 import { PausePopup } from "../../popups/PausePopup";
 
@@ -21,9 +22,8 @@ export class MainScreen extends Container {
   private paused = false;
   private currentTurn: "blue" | "red" = "blue";
   private allUnits: Unit[] = [];
-  private endTurnButton!: Container;
-  private turnText!: Text;
-  private hudBg!: Graphics;
+  private credits: Record<"blue" | "red", number> = { blue: 100, red: 200 };
+  private hud!: Hud;
   private battlePane!: BattlePane;
 
   constructor() {
@@ -62,87 +62,31 @@ export class MainScreen extends Container {
   }
 
   private createUI() {
-    //end turn button
-    this.endTurnButton = new Container();
-    const bg = new Graphics().rect(0, 0, 150, 50).fill(0x333333).stroke({ width: 2, color: 0xffffff });
-    const text = new Text({
-      text: "End Turn",
-      style: { fill: 0xffffff, fontSize: 24, fontWeight: "bold", fontFamily: "Allerta Stencil" },
-    });
-    text.anchor.set(0.5);
-    text.position.set(75, 25);
-    this.endTurnButton.addChild(bg, text);
-    this.endTurnButton.eventMode = "static";
-    this.endTurnButton.cursor = "pointer";
-    this.endTurnButton.on("pointerdown", () => this.endTurn());
-    this.addChild(this.endTurnButton);
-
-    //HUD
-    const hudContainer = new Container();
-    this.hudBg = new Graphics()
-      .poly([
-        -4,
-        -4, // Top Left
-        250,
-        -4, // Top Right
-        250,
-        40, // Right before cut
-        210,
-        80, // Bottom after cut
-        -4,
-        80, // Bottom Left
-      ])
-      .fill(this.currentTurn === "blue" ? C.blue : C.red)
-      .stroke({ width: 4, color: 0xffffff });
-
-    hudContainer.addChild(this.hudBg);
-
-    this.turnText = new Text({
-      text: "BLUE",
-      style: { fill: 0xffffff, fontSize: 32, fontWeight: "bold", fontFamily: "Allerta Stencil" },
-    });
-    this.turnText.position.set(20, 15);
-    hudContainer.addChild(this.turnText);
-
-    this.addChild(hudContainer);
+    this.hud = new Hud(() => this.endTurn());
+    this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
+    this.addChild(this.hud);
   }
 
   private createGrid() {
-    const grid = [
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 0, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
-      [0, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
-      [0, 1, 1, 1, 0, 1, 1, 1, 3, 3, 3, 0, 0, 1, 1, 1, 1, 1, 1, 3, 3, 3, 1, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    const { W, P, M, F, C } = TileType;
+    const grid: TileType[][] = [
+      [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
+      [W, P, P, P, W, P, P, P, P, P, P, W, W, P, P, P, P, P, P, P, P, P, P, W],
+      [W, P, P, P, W, M, M, M, P, P, P, W, W, P, P, P, M, M, M, P, P, P, P, W],
+      [W, P, P, P, W, M, M, P, P, P, P, P, P, P, P, P, M, M, P, P, P, P, P, W],
+      [W, P, P, P, W, M, P, P, P, P, P, P, P, P, P, P, M, P, P, P, P, P, P, W],
+      [W, P, P, P, W, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, W],
+      [W, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, W],
+      [W, P, P, P, P, P, P, P, P, F, F, F, F, F, F, F, F, P, P, P, P, P, P, W],
+      [W, P, P, P, P, P, P, P, F, F, F, P, P, P, P, P, P, P, P, F, F, F, P, W],
+      [W, P, P, P, P, P, P, P, F, F, F, W, C, P, P, P, P, P, P, F, F, F, P, W],
+      [W, P, P, P, W, P, P, P, F, F, F, W, W, P, P, P, P, P, P, F, F, F, P, W],
+      [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
     ];
 
     for (let row = 0; row < grid.length; row++) {
       for (let col = 0; col < grid[0].length; col++) {
-        const tileValue = grid[row][col];
-        let tileType: TileType;
-        switch (tileValue) {
-          case 1:
-            tileType = TileType.P;
-            break;
-          case 2:
-            tileType = TileType.M;
-            break;
-          case 3:
-            tileType = TileType.F;
-            break;
-          default:
-            tileType = TileType.W;
-            break;
-        }
+        const tileType = grid[row][col];
         const tile = new Tile(tileType, col, row);
 
         tile.x = col * Tile.TILE_SIZE;
@@ -211,8 +155,9 @@ export class MainScreen extends Container {
         unit.team = teamName;
         this.allUnits.push(unit);
         unit.on("moved", () => this.onUnitMoved());
-        unit.on("attack", (attacker: Unit, target: Unit) => {
-          this.battlePane.battle(attacker, target);
+        unit.on("attack", async (attacker: Unit, target: Unit) => {
+          await this.battlePane.battle(attacker, target);
+          this.checkCityOccupancy();
           this.updateUnitInteractivity();
         });
 
@@ -228,6 +173,17 @@ export class MainScreen extends Container {
 
     placeTeamUnits(blue, "blue");
     placeTeamUnits(red, "red");
+  }
+
+  private checkCityOccupancy() {
+    this.tiles.forEach((tile) => {
+      if (tile.tileType === TileType.C) {
+        const occupant = tile.children.find((child) => child instanceof Unit && !child.isDead) as Unit | undefined;
+        if (!occupant) {
+          tile.setCaptureProgress(null, 0);
+        }
+      }
+    });
   }
 
   private updateUnitInteractivity() {
@@ -255,10 +211,11 @@ export class MainScreen extends Container {
   }
 
   private onUnitMoved() {
+    this.checkCityOccupancy();
     this.updateUnitInteractivity();
   }
 
-  private endTurn() {
+  private async endTurn() {
     this.currentTurn = this.currentTurn === "blue" ? "red" : "blue";
     this.allUnits.forEach((u) => {
       if (u.team === this.currentTurn) {
@@ -266,30 +223,47 @@ export class MainScreen extends Container {
         u.hasAttacked = false;
       }
     });
-    if (this.hudBg) {
-      this.hudBg
-        .clear()
-        .poly([
-          -4,
-          -4, // Top Left
-          250,
-          -4, // Top Right
-          250,
-          40, // Right before cut
-          210,
-          80, // Bottom after cut
-          -4,
-          80, // Bottom Left
-        ])
-        .fill(this.currentTurn === "blue" ? C.blue : C.red)
-        .stroke({ width: 4, color: 0xffffff });
-    }
 
-    if (this.turnText) {
-      this.turnText.text = `${this.currentTurn.toUpperCase()}`;
+    // When a team unit begins a turn on a city tile, advance capture progress by 1 box
+    this.tiles.forEach((tile) => {
+      if (tile.tileType === TileType.C) {
+        const occupant = tile.children.find((child) => child instanceof Unit && !child.isDead) as Unit | undefined;
+
+        if (occupant && occupant.team === this.currentTurn) {
+          if (tile.captureTeam === this.currentTurn) {
+            tile.setCaptureProgress(this.currentTurn, tile.capturePoints + 1);
+          } else if (tile.captureTeam && tile.capturePoints > 0) {
+            tile.setCaptureProgress(tile.captureTeam, tile.capturePoints - 1);
+          } else {
+            tile.setCaptureProgress(this.currentTurn, 1);
+          }
+        }
+      }
+    });
+
+    if (this.hud) {
+      this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
     }
     this.updateUnitInteractivity();
-    this.showTurnBanner(this.currentTurn);
+
+    // Show turn banner and wait until it fully fades out
+    await this.showTurnBanner(this.currentTurn);
+
+    // Add 1000 credits for each captured city (both boxes full) and trigger floating income animation
+    let cityIncome = 0;
+    this.tiles.forEach((tile) => {
+      if (tile.tileType === TileType.C && tile.owner === this.currentTurn) {
+        cityIncome += 1000;
+        tile.animateIncome(1000);
+      }
+    });
+
+    if (cityIncome > 0) {
+      this.credits[this.currentTurn] += cityIncome;
+      if (this.hud) {
+        this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
+      }
+    }
   }
 
   // TURN BANNER
@@ -309,7 +283,7 @@ export class MainScreen extends Container {
 
     const text = new Text({
       text: `${team.toUpperCase()} TEAM BEGIN`,
-      style: { fill: 0xffffff, fontSize: 64, fontWeight: "bold", fontFamily: "Allerta Stencil" },
+      style: { fill: 0xffffff, fontSize: 64, fontWeight: "bold", fontFamily: "Jersey 25" },
     });
     text.anchor.set(0.5);
     text.position.set(w / 2, h / 2);
@@ -338,9 +312,8 @@ export class MainScreen extends Container {
     this.mainContainer.x = width / 2;
     this.mainContainer.y = height / 2;
 
-    if (this.endTurnButton) {
-      this.endTurnButton.x = width - 170;
-      this.endTurnButton.y = height - 70;
+    if (this.hud) {
+      this.hud.resize(width, height);
     }
 
     if (this.battlePane) {
@@ -366,9 +339,9 @@ export class MainScreen extends Container {
     this.tiles.clear();
     this.allUnits = [];
     this.currentTurn = "blue";
-    if (this.turnText) {
-      this.turnText.text = "BLUE Team's Turn";
-      this.turnText.style.fill = 0x0000ff;
+    this.credits = { blue: 100, red: 200 };
+    if (this.hud) {
+      this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
     }
     this.createGrid();
     this.placeUnits();
