@@ -1,7 +1,7 @@
 import { Container, Sprite, Texture, FederatedPointerEvent, Graphics, Text, Assets } from "pixi.js";
 import { animate } from "motion";
 import { Tile } from "./Tile";
-import { getReachableTiles, getAttackableTiles } from "../../utils/coordinates";
+import { getReachableTiles, getAttackableTiles, getShortestPath } from "../../utils/coordinates";
 import { C } from "../../common";
 
 export enum U {
@@ -50,21 +50,21 @@ export const UNIT: Record<U, IUnit> = {
   tank: {
     health: 100,
     moveType: "treads",
-    moveRange: 4,
-    attackRange: 3,
+    moveRange: 6,
+    attackRange: 1,
     damage: {
-      infantry: { primary: 35, secondary: 75 },
-      commando: { primary: 30, secondary: 70 },
-      tank: { primary: 55, secondary: 6 },
-      recon: { primary: 45, secondary: 65 },
-      artillery: { primary: 45, secondary: 65 },
+      infantry: { primary: 0, secondary: 75 },
+      commando: { primary: 0, secondary: 65 },
+      tank: { primary: 0, secondary: 55 },
+      recon: { primary: 0, secondary: 85 },
+      artillery: { primary: 0, secondary: 70 },
     },
   },
   recon: {
     health: 100,
     moveType: "tires",
-    moveRange: 6,
-    attackRange: 2,
+    moveRange: 8,
+    attackRange: 1,
     damage: {
       infantry: { primary: 0, secondary: 70 },
       commando: { primary: 0, secondary: 65 },
@@ -76,14 +76,14 @@ export const UNIT: Record<U, IUnit> = {
   artillery: {
     health: 100,
     moveType: "treads",
-    moveRange: 3,
-    attackRange: 5,
+    moveRange: 5,
+    attackRange: 3,
     damage: {
-      infantry: { primary: 65, secondary: 0 },
-      commando: { primary: 60, secondary: 0 },
-      tank: { primary: 55, secondary: 0 },
-      recon: { primary: 60, secondary: 0 },
-      artillery: { primary: 55, secondary: 0 },
+      infantry: { primary: 0, secondary: 90 },
+      commando: { primary: 0, secondary: 85 },
+      tank: { primary: 0, secondary: 70 },
+      recon: { primary: 0, secondary: 80 },
+      artillery: { primary: 0, secondary: 75 },
     },
   },
 };
@@ -103,6 +103,9 @@ export class Unit extends Container {
   public boardTiles?: Map<string, Tile>;
   public boardGrid?: Container;
   private hoveredTile: Tile | null = null;
+  private currentPath: Tile[] = [];
+  private reachableTiles: Set<Tile> = new Set();
+  private pathGraphics?: Graphics;
   hasMoved: boolean = false;
   hasAttacked: boolean = false;
   private isDead: boolean = false;
@@ -176,14 +179,17 @@ export class Unit extends Container {
 
   public showMovementRange() {
     if (!this.boardTiles) return;
-
     const parentTile = this.parent as Tile;
-    this.boardTiles.forEach((t) => (t.state = "default"));
-    getReachableTiles(parentTile.gridX, parentTile.gridY, this.moveRange, this.moveType, this.boardTiles).forEach(
-      (t) => {
-        t.state = "canMoveTo";
-      }
+    const reachable = getReachableTiles(
+      parentTile.gridX,
+      parentTile.gridY,
+      this.moveRange,
+      this.moveType,
+      this.boardTiles
     );
+    this.reachableTiles = new Set(reachable);
+    this.currentPath = [parentTile];
+    this.updatePathVisuals();
   }
 
   private onDragStart = (e: FederatedPointerEvent) => {
@@ -206,7 +212,56 @@ export class Unit extends Container {
   };
 
   private onDragMove = (e: FederatedPointerEvent) => {
-    if ((this.isDragging || this.isRightDragging) && this.boardGrid && this.boardTiles) {
+    if (this.isDragging && this.boardGrid && this.boardTiles) {
+      const localPos = this.boardGrid.toLocal(e.global);
+      const col = Math.floor(localPos.x / Tile.TILE_SIZE);
+      const row = Math.floor(localPos.y / Tile.TILE_SIZE);
+      const tileId = `${col}_${row}`;
+      const tile = this.boardTiles.get(tileId);
+      const parentTile = this.parent as Tile;
+
+      if (tile && this.currentPath.length > 0) {
+        const lastTile = this.currentPath[this.currentPath.length - 1];
+
+        if (tile !== lastTile) {
+          const isOccupied = tile.children.some((child) => child instanceof Unit && child !== this);
+
+          if (this.currentPath.includes(tile)) {
+            // User backtracked to an earlier tile in the path
+            const idx = this.currentPath.indexOf(tile);
+            this.currentPath = this.currentPath.slice(0, idx + 1);
+            this.updatePathVisuals();
+          } else if (!isOccupied) {
+            const isAdjacent = Math.abs(tile.gridX - lastTile.gridX) + Math.abs(tile.gridY - lastTile.gridY) === 1;
+            const cost = tile.movementCost[this.moveType];
+            const currentCost = this.currentPath.slice(1).reduce((acc, t) => acc + t.movementCost[this.moveType], 0);
+
+            if (isAdjacent && cost < 100 && currentCost + cost <= this.moveRange) {
+              // Adjacent tile within movement range
+              this.currentPath.push(tile);
+              this.updatePathVisuals();
+            } else if (this.reachableTiles.has(tile)) {
+              // Mouse moved fast or jumped: compute shortest path avoiding occupied tiles
+              const newPath = getShortestPath(
+                parentTile.gridX,
+                parentTile.gridY,
+                tile.gridX,
+                tile.gridY,
+                this.moveRange,
+                this.moveType,
+                this.boardTiles
+              );
+              if (newPath) {
+                this.currentPath = newPath;
+                this.updatePathVisuals();
+              }
+            }
+          }
+        }
+      }
+
+      this.emit("dragMove", this, e.global);
+    } else if (this.isRightDragging && this.boardGrid && this.boardTiles) {
       const localPos = this.boardGrid.toLocal(e.global);
       const col = Math.floor(localPos.x / Tile.TILE_SIZE);
       const row = Math.floor(localPos.y / Tile.TILE_SIZE);
@@ -214,75 +269,168 @@ export class Unit extends Container {
       const tile = this.boardTiles.get(tileId);
 
       if (this.hoveredTile && this.hoveredTile !== tile) {
-        if (this.hoveredTile.state === "hover") {
-          this.hoveredTile.state = "canMoveTo"; // Revert to regular highlight
-        } else if (this.hoveredTile.state === "attackHover") {
+        if (this.hoveredTile.state === "attackHover") {
           this.hoveredTile.state = "canAttack";
         }
         this.hoveredTile = null;
       }
 
-      if (tile) {
-        if (this.isDragging && tile.state === "canMoveTo") {
-          tile.state = "hover";
-          this.hoveredTile = tile;
-        } else if (this.isRightDragging && tile.state === "canAttack") {
-          tile.state = "attackHover";
-          this.hoveredTile = tile;
-        }
+      if (tile && tile.state === "canAttack") {
+        tile.state = "attackHover";
+        this.hoveredTile = tile;
       }
 
       this.emit("dragMove", this, e.global);
     }
   };
 
+  private drawArrowPath(path: Tile[]) {
+    if (!this.pathGraphics) {
+      this.pathGraphics = new Graphics();
+      this.pathGraphics.zIndex = 5000;
+    }
+    if (this.boardGrid && this.pathGraphics.parent !== this.boardGrid) {
+      this.boardGrid.addChild(this.pathGraphics);
+    }
+
+    this.pathGraphics.clear();
+
+    if (path.length < 2) return;
+
+    const points = path.map((tile) => ({
+      x: tile.gridX * Tile.TILE_SIZE + Tile.TILE_SIZE / 2,
+      y: tile.gridY * Tile.TILE_SIZE + Tile.TILE_SIZE / 2,
+    }));
+
+    const n = points.length;
+    const pPrev = points[n - 2];
+    const pLast = points[n - 1];
+
+    const dx = Math.sign(pLast.x - pPrev.x);
+    const dy = Math.sign(pLast.y - pPrev.y);
+    const perpX = -dy;
+    const perpY = dx;
+
+    // Arrowhead geometry (rounded triangle shape)
+    const headLength = 30;
+    const headWidth = 22;
+
+    const tipX = pLast.x + dx * 14;
+    const tipY = pLast.y + dy * 14;
+    const baseX = tipX - dx * headLength;
+    const baseY = tipY - dy * headLength;
+
+    const wing1X = baseX + perpX * headWidth;
+    const wing1Y = baseY + perpY * headWidth;
+    const wing2X = baseX - perpX * headWidth;
+    const wing2Y = baseY - perpY * headWidth;
+
+    // Start line at the border edge between the starting unit tile and the next tile
+    const startEdgeX = (points[0].x + points[1].x) / 2;
+    const startEdgeY = (points[0].y + points[1].y) / 2;
+
+    // 1. Draw 4-pixel drop shadow below path (Y + 4)
+    this.pathGraphics.moveTo(startEdgeX, startEdgeY + 4);
+    for (let i = 1; i < n - 1; i++) {
+      this.pathGraphics.lineTo(points[i].x, points[i].y + 4);
+    }
+    this.pathGraphics.lineTo(baseX, baseY + 4);
+    this.pathGraphics.stroke({ color: 0x000000, alpha: 0.35, width: 22, cap: "butt", join: "round" });
+
+    this.pathGraphics
+      .poly([
+        { x: tipX, y: tipY + 4 },
+        { x: wing1X, y: wing1Y + 4 },
+        { x: wing2X, y: wing2Y + 4 },
+      ])
+      .fill({ color: 0x000000, alpha: 0.35 })
+      .stroke({ color: 0x000000, alpha: 0.35, width: 8, join: "round", cap: "round" });
+
+    // 2. Draw main chunky white path line
+    this.pathGraphics.moveTo(startEdgeX, startEdgeY);
+    for (let i = 1; i < n - 1; i++) {
+      this.pathGraphics.lineTo(points[i].x, points[i].y);
+    }
+    this.pathGraphics.lineTo(baseX, baseY);
+    this.pathGraphics.stroke({ color: 0xffffff, width: 22, cap: "butt", join: "round" });
+
+    // 3. Draw solid rounded triangle white arrowhead at destination
+    this.pathGraphics
+      .poly([
+        { x: tipX, y: tipY },
+        { x: wing1X, y: wing1Y },
+        { x: wing2X, y: wing2Y },
+      ])
+      .fill(0xffffff)
+      .stroke({ color: 0xffffff, width: 8, join: "round", cap: "round" });
+  }
+
+  private updatePathVisuals() {
+    if (!this.boardTiles) return;
+    this.boardTiles.forEach((t) => (t.state = "default"));
+    // Highlight all reachable tiles in yellow
+    this.reachableTiles.forEach((t) => {
+      t.state = "canMoveTo";
+    });
+    // Set destination tile to hover (displays hover reticle)
+    if (this.currentPath.length > 0) {
+      const targetTile = this.currentPath[this.currentPath.length - 1];
+      targetTile.state = "hover";
+    }
+    // Draw the arrow path
+    this.drawArrowPath(this.currentPath);
+  }
+
   private onDragEnd = (e: FederatedPointerEvent) => {
     if (e.button !== 0) return; // Only process left clicks
     if (this.isDragging) {
       this.isDragging = false;
 
-      if (this.hoveredTile && this.hoveredTile.state === "hover" && this.boardGrid && this.boardTiles) {
-        const parentTile = this.parent as Tile;
-        const targetTile = this.hoveredTile;
+      const path = [...this.currentPath];
+      this.currentPath = [];
+      this.reachableTiles.clear();
 
-        // Calculate position relative to gridContainer
-        const startX = parentTile.x + Tile.TILE_SIZE / 2;
-        const startY = parentTile.y + Tile.TILE_SIZE / 2;
-        const targetX = targetTile.x + Tile.TILE_SIZE / 2;
-        const targetY = targetTile.y + Tile.TILE_SIZE / 2;
-
-        // Re-parent the unit to the gridContainer to render above all tiles during animation
-        this.boardGrid.addChild(this);
-        this.position.set(startX, startY);
-
-        const runAnimation = async () => {
-          this.eventMode = "none"; // Prevent dragging during animation
-          const distTilesX = Math.abs(targetX - startX) / Tile.TILE_SIZE;
-          const distTilesY = Math.abs(targetY - startY) / Tile.TILE_SIZE;
-
-          if (distTilesX > 0) {
-            await animate(this as Container, { x: targetX }, { duration: distTilesX * 0.1, ease: "linear" });
-          }
-          if (distTilesY > 0) {
-            await animate(this as Container, { y: targetY }, { duration: distTilesY * 0.1, ease: "linear" });
-          }
-
-          // Re-parent back to the target tile after animation
-          targetTile.addChild(this);
-          this.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
-          this.eventMode = "static";
-
-          if (targetTile !== parentTile) {
-            this.hasMoved = true;
-            this.emit("moved", this);
-          }
-        };
-        runAnimation();
+      if (this.pathGraphics) {
+        this.pathGraphics.clear();
       }
 
-      this.hoveredTile = null;
       if (this.boardTiles) {
         this.boardTiles.forEach((t) => (t.state = "default"));
+      }
+
+      if (path.length > 1 && this.boardGrid && this.boardTiles) {
+        const parentTile = this.parent as Tile;
+        const targetTile = path[path.length - 1];
+
+        // Ensure target is not occupied by another unit
+        const isOccupied = targetTile.children.some((child) => child instanceof Unit && child !== this);
+
+        if (!isOccupied && targetTile !== parentTile) {
+          // Re-parent the unit to the gridContainer to render above all tiles during animation
+          const startX = parentTile.x + Tile.TILE_SIZE / 2;
+          const startY = parentTile.y + Tile.TILE_SIZE / 2;
+          this.boardGrid.addChild(this);
+          this.position.set(startX, startY);
+
+          const runAnimation = async () => {
+            this.eventMode = "none"; // Prevent dragging during animation
+            for (let i = 1; i < path.length; i++) {
+              const stepTile = path[i];
+              const targetX = stepTile.x + Tile.TILE_SIZE / 2;
+              const targetY = stepTile.y + Tile.TILE_SIZE / 2;
+              await animate(this as Container, { x: targetX, y: targetY }, { duration: 0.1, ease: "linear" });
+            }
+
+            // Re-parent back to the target tile after animation
+            targetTile.addChild(this);
+            this.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
+            this.eventMode = "static";
+
+            this.hasMoved = true;
+            this.emit("moved", this);
+          };
+          runAnimation();
+        }
       }
 
       this.emit("dragEnd", this, e.global);

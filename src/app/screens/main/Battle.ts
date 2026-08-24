@@ -12,6 +12,7 @@ export const PANEL_HEIGHT = BATTLE_HEIGHT;
 export const BORDER_WIDTH = 8;
 
 const bgPlain = await Assets.load("assets/main/pane-grass.png");
+const bgForest = await Assets.load("assets/main/pane-forest.png");
 
 class BattleModal extends Container {
   public bg: Graphics;
@@ -156,6 +157,11 @@ class BattleModal extends Container {
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
 
     if (this.currentTerrain === TileType.P) {
+      this.bgSprite.texture = bgPlain;
+      this.bgSprite.visible = true;
+      this.bg.visible = false;
+    } else if (this.currentTerrain === TileType.F) {
+      this.bgSprite.texture = bgForest;
       this.bgSprite.visible = true;
       this.bg.visible = false;
     } else {

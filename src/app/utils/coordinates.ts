@@ -91,3 +91,89 @@ export function getAttackableTiles(
   }
   return attackable;
 }
+
+/**
+ * Uses Dijkstra's algorithm to find the shortest path from start to target based on moveRange, moveType, and terrain costs.
+ * Avoids any tiles occupied by other units.
+ */
+export function getShortestPath(
+  startX: number,
+  startY: number,
+  targetX: number,
+  targetY: number,
+  moveRange: number,
+  moveType: "foot" | "treads" | "tires" | "air",
+  tiles: Map<string, Tile>
+): Tile[] | null {
+  const startId = `${startX}_${startY}`;
+  const targetId = `${targetX}_${targetY}`;
+
+  const startTile = tiles.get(startId);
+  const targetTile = tiles.get(targetId);
+  if (!startTile || !targetTile) return null;
+
+  if (startId === targetId) {
+    return [startTile];
+  }
+
+  // Target cannot be occupied by a unit
+  if (targetTile.children.some((child) => child instanceof Unit)) {
+    return null;
+  }
+
+  const costs = new Map<string, number>();
+  const previous = new Map<string, string>();
+  costs.set(startId, 0);
+
+  const queue = [{ x: startX, y: startY, cost: 0 }];
+
+  const directions = [
+    { dx: 0, dy: -1 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+    { dx: 1, dy: 0 },
+  ];
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift()!;
+    const currentId = `${current.x}_${current.y}`;
+
+    if (currentId === targetId) {
+      const path: Tile[] = [];
+      let curr: string | undefined = targetId;
+      while (curr) {
+        const t = tiles.get(curr);
+        if (t) path.unshift(t);
+        curr = previous.get(curr);
+      }
+      return path;
+    }
+
+    for (const dir of directions) {
+      const nx = current.x + dir.dx;
+      const ny = current.y + dir.dy;
+      const neighborId = `${nx}_${ny}`;
+      const neighborTile = tiles.get(neighborId);
+
+      if (!neighborTile) continue;
+
+      // Cannot move into a tile already occupied by a unit
+      const hasUnit = neighborTile.children.some((child) => child instanceof Unit);
+      if (hasUnit && neighborId !== startId) continue;
+
+      const cost = neighborTile.movementCost[moveType];
+      const newCost = current.cost + cost;
+
+      if (newCost <= moveRange) {
+        if (!costs.has(neighborId) || newCost < costs.get(neighborId)!) {
+          costs.set(neighborId, newCost);
+          previous.set(neighborId, currentId);
+          queue.push({ x: nx, y: ny, cost: newCost });
+        }
+      }
+    }
+  }
+
+  return null;
+}

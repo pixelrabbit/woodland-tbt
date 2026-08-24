@@ -129,7 +129,7 @@ export class Tile extends Container {
     }
 
     // range highlight
-    this.highlight = new Graphics().rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE).fill({ color: 0xffff00, alpha: 0.25 });
+    this.highlight = new Graphics().rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE).fill({ color: 0xffffff, alpha: 0.35 });
     this.highlight.visible = false;
     this.addChild(this.highlight);
 
@@ -174,8 +174,8 @@ export class Tile extends Container {
     this.hoverReticle.visible = false;
     this.hoverReticle.tint = 0xffffff;
 
-    if (this._state === "canMoveTo" || this._state === "hover") {
-      this.highlight.tint = 0xffffff;
+    if (this._state === "canMoveTo" || this._state === "hover" || this._state === "path") {
+      this.highlight.tint = 0xffff00;
       this.highlight.visible = true;
     } else if (this._state === "canAttack" || this._state === "attackHover") {
       this.highlight.tint = 0xff0000;
