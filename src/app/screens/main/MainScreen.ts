@@ -8,6 +8,7 @@ import { Infantry, Commando, Tank, Recon, Artillery } from "./Unit";
 import { Unit } from "./Unit";
 import { BattlePane } from "./Battle";
 import { C } from "../../common";
+import { PausePopup } from "../../popups/PausePopup";
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -30,6 +31,18 @@ export class MainScreen extends Container {
 
     // Prevent the default browser right-click menu from appearing
     document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    // Toggle pause with Keypad 0 TODO: not working
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Numpad0") {
+        const nav = engine().navigation;
+        if (nav.currentPopup instanceof PausePopup) {
+          nav.dismissPopup();
+        } else if (!nav.currentPopup) {
+          nav.presentPopup(PausePopup);
+        }
+      }
+    });
 
     this.mainContainer = new Container();
     this.mainContainer.sortableChildren = true;
@@ -169,7 +182,6 @@ export class MainScreen extends Container {
         x: number;
         y: number;
       }[],
-      color: number,
       teamName: "blue" | "red"
     ) => {
       team.forEach((u) => {
@@ -204,9 +216,6 @@ export class MainScreen extends Container {
           this.updateUnitInteractivity();
         });
 
-        const outline = new Graphics().rect(-32, -32, 64, 64).stroke({ width: 2, color, alignment: 1 });
-        unit.addChild(outline);
-
         const tileId = `${u.x}_${u.y}`;
         const tile = this.tiles.get(tileId);
         if (tile) {
@@ -217,8 +226,8 @@ export class MainScreen extends Container {
       });
     };
 
-    placeTeamUnits(blue, C.blueAlt, "blue");
-    placeTeamUnits(red, C.redAlt, "red");
+    placeTeamUnits(blue, "blue");
+    placeTeamUnits(red, "red");
   }
 
   private updateUnitInteractivity() {

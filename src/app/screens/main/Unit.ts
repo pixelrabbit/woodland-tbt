@@ -90,6 +90,7 @@ export const UNIT: Record<U, IUnit> = {
 
 export class Unit extends Container {
   sprite: Sprite;
+  public teamBg: Graphics;
   private isDragging: boolean = false;
   private isRightDragging: boolean = false;
   private healthText?: Text;
@@ -113,11 +114,12 @@ export class Unit extends Container {
 
   set team(value: "blue" | "red") {
     this._team = value;
+    const color = value === "blue" ? C.blue : C.red;
+    if (this.teamBg) {
+      this.teamBg.clear().circle(0, 0, 21).fill(color);
+    }
     if (this.healthBg) {
-      this.healthBg
-        .clear()
-        .rect(8, 16, 24, 16)
-        .fill(value === "blue" ? C.blue : C.red);
+      this.healthBg.clear().rect(8, 16, 24, 16).fill(color);
     }
   }
 
@@ -132,6 +134,10 @@ export class Unit extends Container {
 
     this.position.set(x, y);
 
+    // Team color background circle (66% diameter, centered)
+    this.teamBg = new Graphics().circle(0, 0, 21).fill(this._team === "blue" ? C.blue : C.red);
+    this.addChild(this.teamBg);
+
     this.sprite = new Sprite(texture);
     this.sprite.anchor.set(0.5);
     this.sprite.width = 64;
@@ -143,7 +149,7 @@ export class Unit extends Container {
     this.addChild(this.healthBg);
 
     this.healthText = new Text({
-      text: Math.max(this._health).toString(),
+      text: Math.round(this._health / 10).toString(),
       style: {
         fontSize: 12,
         fill: 0xffffff,
@@ -312,7 +318,7 @@ export class Unit extends Container {
   set health(value: number) {
     this._health = value;
     if (this.healthText) {
-      this.healthText.text = value.toString();
+      this.healthText.text = Math.round(value / 10);
     }
 
     if (this._health <= 0 && !this.isDead) {
