@@ -124,6 +124,9 @@ export class Unit extends Container {
     if (this.healthBg) {
       this.healthBg.clear().rect(8, 16, 24, 16).fill(color);
     }
+    if (this.sprite) {
+      this.sprite.scale.x = value === "red" ? -Math.abs(this.sprite.scale.x) : Math.abs(this.sprite.scale.x);
+    }
   }
 
   constructor(type: U, x: number, y: number, texture?: Texture) {
@@ -312,8 +315,8 @@ export class Unit extends Container {
     const perpY = dx;
 
     // Arrowhead geometry (rounded triangle shape)
-    const headLength = 30;
-    const headWidth = 22;
+    const headLength = 18;
+    const headWidth = 16;
 
     const tipX = pLast.x + dx * 14;
     const tipY = pLast.y + dy * 14;

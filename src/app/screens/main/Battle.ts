@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Sprite, Assets, Texture } from "pixi.js";
+import { Container, Graphics, Text, Sprite, Assets, Texture, ColorMatrixFilter } from "pixi.js";
 import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { C } from "../../common";
@@ -21,10 +21,99 @@ const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
   [TileType.M]: bgMountain,
 };
 
+export interface SlotCoordinate {
+  x: number;
+  y: number;
+}
+
+/**
+ * Manually configured slot coordinates for each terrain pane type.
+ * Defined for a standard left pane (600x800). Right pane automatically mirrors X coordinates.
+ */
+export const TERRAIN_SLOT_POSITIONS: Record<TileType, SlotCoordinate[]> = {
+  [TileType.P]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+  [TileType.F]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+  [TileType.M]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+  [TileType.C]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+  [TileType.W]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+};
+
+export interface ShakeOptions {
+  blink?: boolean;
+  blinkStrength?: number;
+}
+
+export async function shake(element: Container, intensity = 18, duration = 0.3, options: ShakeOptions = {}) {
+  const baseX = element.x;
+  const baseY = element.y;
+  const steps = 10;
+  const stepDuration = duration / steps;
+
+  let whiteFilter: ColorMatrixFilter | null = null;
+  if (options.blink) {
+    whiteFilter = new ColorMatrixFilter();
+    whiteFilter.brightness(1.6, false);
+    whiteFilter.alpha = options.blinkStrength ?? 0.4;
+  }
+
+  for (let i = 0; i < steps; i++) {
+    const decay = (steps - i) / steps;
+    const dir = i % 2 === 0 ? 1 : -1;
+    const offsetX = dir * intensity * decay * (0.6 + Math.random() * 0.4);
+    const offsetY = (Math.random() * 2 - 1) * (intensity * 0.4) * decay;
+    element.x = baseX + offsetX;
+    element.y = baseY + offsetY;
+
+    if (whiteFilter) {
+      element.filters = i % 2 === 0 ? [whiteFilter] : [];
+    }
+
+    await waitFor(stepDuration);
+  }
+
+  element.x = baseX;
+  element.y = baseY;
+  if (whiteFilter) {
+    element.filters = [];
+  }
+}
+
 class BattleModal extends Container {
   public bg: Graphics;
   public bgSprite: Sprite;
   public border: Graphics;
+  public unitsContainer: Container;
+  public paneMask: Graphics;
   // public typeText: Text;
   public healthText: Text;
   // public terrainText: Text;
@@ -32,7 +121,6 @@ class BattleModal extends Container {
   public unitSprites: Sprite[] = [];
   public bgColor = 0x000000;
   public borderColor = 0x000000;
-  private currentNumSprites = 1;
   private originalTint: number = 0xffffff;
   private _currentHealth: number = 0;
   private targetHealth: number = 0;
@@ -53,6 +141,7 @@ class BattleModal extends Container {
   public setFlipped(flipped: boolean) {
     this.isFlipped = flipped;
     this.updateBgLayout();
+    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
   }
 
   private updateBgLayout() {
@@ -77,30 +166,30 @@ class BattleModal extends Container {
     this.updateBgLayout();
     this.addChild(this.bgSprite);
 
+    this.paneMask = new Graphics().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill(0xffffff);
+    this.addChild(this.paneMask);
+
+    this.unitsContainer = new Container();
+    this.unitsContainer.mask = this.paneMask;
+    this.addChild(this.unitsContainer);
+
     this.border = new Graphics()
       .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
       .stroke({ width: BORDER_WIDTH, color: this.borderColor, alignment: 1 });
     this.addChild(this.border);
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       const sprite = new Sprite();
       sprite.anchor.set(0.5);
       this.unitSprites.push(sprite);
-      this.addChild(sprite);
+      this.unitsContainer.addChild(sprite);
     }
 
     const centerX = PANEL_WIDTH / 2;
 
     const textStyle = { fill: 0xffffff, fontSize: 24, fontFamily: "Allerta Stencil" };
 
-    // this.typeText = new Text({
-    //   text: "Type:",
-    //   style: { ...textStyle, fontSize: 32, fontWeight: "bold" },
-    // });
-    // this.typeText.anchor.set(0.5, 0);
-    // this.typeText.position.set(centerX, 80);
-    // this.addChild(this.typeText);
-
+    // HEALTH
     this.healthText = new Text({
       style: {
         ...textStyle,
@@ -112,11 +201,7 @@ class BattleModal extends Container {
     this.healthText.position.set(centerX, 24);
     this.addChild(this.healthText);
 
-    // this.terrainText = new Text({ text: "Terrain:", style: textStyle });
-    // this.terrainText.anchor.set(0.5, 0);
-    // this.terrainText.position.set(centerX, 180);
-    // this.addChild(this.terrainText);
-
+    // DEFENSE
     this.defenseText = new Text({ text: "Defense:", style: textStyle });
     this.defenseText.anchor.set(0.5, 0);
     this.defenseText.position.set(centerX, 220);
@@ -124,6 +209,7 @@ class BattleModal extends Container {
   }
 
   private removedSpritesToAnimate: Sprite[] = [];
+  private activeSprites: Sprite[] = [];
 
   public update(unit: Unit, initialize: boolean = false) {
     if (initialize) {
@@ -142,25 +228,25 @@ class BattleModal extends Container {
       this.originalTint = unit.sprite.tint;
     }
 
-    let numSprites = 1;
-    if (unit.health > 66) numSprites = 3;
-    else if (unit.health > 33) numSprites = 2;
+    const numSprites = Math.max(0, Math.ceil(unit.health / 20));
 
-    const previousNumSprites = this.currentNumSprites;
-    this.currentNumSprites = numSprites;
-
-    if (!initialize && numSprites < previousNumSprites) {
-      for (let i = numSprites; i < previousNumSprites; i++) {
-        this.removedSpritesToAnimate.push(this.unitSprites[i]);
+    if (initialize) {
+      this.activeSprites = [...this.unitSprites.slice(0, numSprites)];
+    } else if (numSprites < this.activeSprites.length) {
+      const countToRemove = this.activeSprites.length - numSprites;
+      for (let i = 0; i < countToRemove; i++) {
+        const randomIndex = Math.floor(Math.random() * this.activeSprites.length);
+        const [removedSprite] = this.activeSprites.splice(randomIndex, 1);
+        this.removedSpritesToAnimate.push(removedSprite);
       }
     }
 
-    this.unitSprites.forEach((sprite, index) => {
+    this.unitSprites.forEach((sprite) => {
       if (unit.sprite && unit.sprite.texture) {
         sprite.texture = unit.sprite.texture;
         sprite.tint = this.originalTint;
       }
-      if (index < numSprites) {
+      if (this.activeSprites.includes(sprite)) {
         sprite.visible = true;
         sprite.alpha = 1;
       } else if (!this.removedSpritesToAnimate.includes(sprite)) {
@@ -169,8 +255,9 @@ class BattleModal extends Container {
       }
     });
 
-    const isAnimatingDamage = !initialize && this.removedSpritesToAnimate.length > 0;
-    this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT, isAnimatingDamage);
+    if (initialize) {
+      this.positionSprites(PANEL_WIDTH, PANEL_HEIGHT);
+    }
 
     this.bgColor = unit.team === "blue" ? C.blue : C.red;
     this.borderColor = this.bgColor;
@@ -189,56 +276,39 @@ class BattleModal extends Container {
     }
   }
 
-  private getSpritePosition(index: number, total: number, width: number, height: number, terrain: TileType) {
-    const spacingX = width / (total + 1);
-    const x = spacingX * (index + 1);
-    let y = height / 2;
-
-    switch (terrain) {
-      case TileType.M: // Mountain
-        y = height / 2 + (index % 2 === 0 ? -30 : 30);
-        break;
-      case TileType.F: // Forest
-        y = height / 2 + (index === 1 ? -40 : 20);
-        break;
-      case TileType.C: // City
-        y = height / 2 + (index % 2 === 0 ? 20 : -20);
-        break;
-      case TileType.W: // Water
-        y = height / 2 + (index * 15 - 15);
-        break;
-      case TileType.P: // Plain
-      default:
-        // Default horizontal
-        break;
+  private getSpritePosition(index: number, width: number, height: number, terrain: TileType) {
+    const terrainSlots = TERRAIN_SLOT_POSITIONS[terrain];
+    if (terrainSlots && terrainSlots[index]) {
+      const slot = terrainSlots[index];
+      const scaleX = width / PANEL_WIDTH;
+      const scaleY = height / PANEL_HEIGHT;
+      return {
+        x: slot.x * scaleX,
+        y: slot.y * scaleY,
+      };
     }
-    return { x, y };
+
+    const total = 5;
+    const spacingX = width / (total + 1);
+    return {
+      x: spacingX * (index + 1),
+      y: height / 2,
+    };
   }
 
-  private positionSprites(modalWidth: number, height: number, animated = false) {
-    const spriteSize = Math.min(200, modalWidth / this.currentNumSprites);
-    let visibleIndex = 0;
+  private positionSprites(modalWidth: number, height: number) {
+    const spriteSize = 160;
     this.unitSprites.forEach((sprite, index) => {
-      if (index < this.currentNumSprites) {
-        const { x: targetX, y: targetY } = this.getSpritePosition(
-          visibleIndex,
-          this.currentNumSprites,
-          modalWidth,
-          height,
-          this.currentTerrain
-        );
-        if (animated) {
-          animate(
-            sprite as Container,
-            { x: targetX, y: targetY, width: spriteSize, height: spriteSize },
-            { duration: 0.5 }
-          );
-        } else {
-          sprite.width = spriteSize;
-          sprite.height = spriteSize;
-          sprite.position.set(targetX, targetY);
-        }
-        visibleIndex++;
+      const { x: baseSlotX, y: targetY } = this.getSpritePosition(index, modalWidth, height, this.currentTerrain);
+      const targetX = this.isFlipped ? modalWidth - baseSlotX : baseSlotX;
+
+      sprite.width = spriteSize;
+      sprite.height = spriteSize;
+      sprite.position.set(targetX, targetY);
+      if (this.isFlipped) {
+        sprite.scale.x = -Math.abs(sprite.scale.x);
+      } else {
+        sprite.scale.x = Math.abs(sprite.scale.x);
       }
     });
   }
@@ -263,6 +333,9 @@ class BattleModal extends Container {
       })()
     );
 
+    // Unit shakes a little and blinks white when receiving damage
+    promises.push(shake(this.unitsContainer, 8, 0.4, { blink: true }));
+
     const startHealth = this.currentHealth;
     const endHealth = this.targetHealth;
     promises.push(
@@ -278,9 +351,7 @@ class BattleModal extends Container {
     );
 
     for (const sprite of this.removedSpritesToAnimate) {
-      const distLeft = sprite.x;
-      const distRight = PANEL_WIDTH - sprite.x;
-      const targetX = distLeft < distRight ? -sprite.width : PANEL_WIDTH + sprite.width;
+      const targetX = this.isFlipped ? PANEL_WIDTH + sprite.width : -sprite.width;
 
       promises.push(
         (async () => {
@@ -294,13 +365,14 @@ class BattleModal extends Container {
     if (promises.length > 0) {
       await Promise.all(promises);
     } else {
-      await waitFor(0.5);
+      await waitFor(0.2);
     }
   }
 
   public resize() {
     this.bg.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill({ color: this.bgColor });
     this.updateBgLayout();
+    this.paneMask.clear().rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT).fill(0xffffff);
     this.border
       .clear()
       .rect(0, 0, PANEL_WIDTH, PANEL_HEIGHT)
@@ -367,7 +439,11 @@ export class BattlePane extends Container {
     const attackerTile = attacker.parent as Tile | undefined;
     const targetTile = target.parent as Tile | undefined;
     if (attackerTile && targetTile) {
-      this.attackerOnLeft = attackerTile.gridX <= targetTile.gridX;
+      if (attackerTile.gridX === targetTile.gridX) {
+        this.attackerOnLeft = attacker.team === "blue";
+      } else {
+        this.attackerOnLeft = attackerTile.gridX < targetTile.gridX;
+      }
     }
 
     const { left: leftPane, right: rightPane } = this.panes;
@@ -404,7 +480,7 @@ export class BattlePane extends Container {
     ]);
 
     // Shake the modal upon collision
-    await this.shake(this.panelContainer, 18, 0.3);
+    await shake(this.panelContainer, 18, 0.3);
 
     await waitFor(0.2);
 
@@ -424,24 +500,6 @@ export class BattlePane extends Container {
     if (this.currentShowId === showId) {
       await this.hide();
     }
-  }
-
-  private async shake(element: Container, intensity = 18, duration = 0.3) {
-    const baseX = element.x;
-    const baseY = element.y;
-    const steps = 10;
-    const stepDuration = duration / steps;
-    for (let i = 0; i < steps; i++) {
-      const decay = (steps - i) / steps;
-      const dir = i % 2 === 0 ? 1 : -1;
-      const offsetX = dir * intensity * decay * (0.6 + Math.random() * 0.4);
-      const offsetY = (Math.random() * 2 - 1) * (intensity * 0.4) * decay;
-      element.x = baseX + offsetX;
-      element.y = baseY + offsetY;
-      await waitFor(stepDuration);
-    }
-    element.x = baseX;
-    element.y = baseY;
   }
 
   private async executeStrike(source: Unit, target: Unit, targetModal: BattleModal) {
