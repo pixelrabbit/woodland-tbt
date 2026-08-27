@@ -387,43 +387,45 @@ export class Unit extends Container {
       }
 
       if (path.length > 1 && this.boardGrid && this.boardTiles) {
-        const parentTile = this.parent as Tile;
-        const targetTile = path[path.length - 1];
-
-        // Ensure target is not occupied by another unit
-        const isOccupied = targetTile.children.some((child) => child instanceof Unit && child !== this);
-
-        if (!isOccupied && targetTile !== parentTile) {
-          // Re-parent the unit to the gridContainer to render above all tiles during animation
-          const startX = parentTile.x + Tile.TILE_SIZE / 2;
-          const startY = parentTile.y + Tile.TILE_SIZE / 2;
-          this.boardGrid.addChild(this);
-          this.position.set(startX, startY);
-
-          const runAnimation = async () => {
-            this.eventMode = "none"; // Prevent dragging during animation
-            for (let i = 1; i < path.length; i++) {
-              const stepTile = path[i];
-              const targetX = stepTile.x + Tile.TILE_SIZE / 2;
-              const targetY = stepTile.y + Tile.TILE_SIZE / 2;
-              await animate(this as Container, { x: targetX, y: targetY }, { duration: 0.15, ease: "linear" });
-            }
-
-            // Re-parent back to the target tile after animation
-            targetTile.addChild(this);
-            this.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
-            this.eventMode = "static";
-
-            this.hasMoved = true;
-            this.emit("moved", this);
-          };
-          runAnimation();
-        }
+        this.moveToTile(path);
       }
 
       this.emit("dragEnd", this, e.global);
     }
   };
+
+  public async moveToTile(path: Tile[]): Promise<void> {
+    if (path.length <= 1 || !this.boardGrid || !this.boardTiles) return;
+    const parentTile = this.parent as Tile;
+    const targetTile = path[path.length - 1];
+
+    // Ensure target is not occupied by another unit
+    const isOccupied = targetTile.children.some((child) => child instanceof Unit && child !== this);
+
+    if (!isOccupied && targetTile !== parentTile) {
+      // Re-parent the unit to the gridContainer to render above all tiles during animation
+      const startX = parentTile.x + Tile.TILE_SIZE / 2;
+      const startY = parentTile.y + Tile.TILE_SIZE / 2;
+      this.boardGrid.addChild(this);
+      this.position.set(startX, startY);
+
+      this.eventMode = "none"; // Prevent dragging during animation
+      for (let i = 1; i < path.length; i++) {
+        const stepTile = path[i];
+        const targetX = stepTile.x + Tile.TILE_SIZE / 2;
+        const targetY = stepTile.y + Tile.TILE_SIZE / 2;
+        await animate(this as Container, { x: targetX, y: targetY }, { duration: 0.15, ease: "linear" });
+      }
+
+      // Re-parent back to the target tile after animation
+      targetTile.addChild(this);
+      this.position.set(Tile.TILE_SIZE / 2, Tile.TILE_SIZE / 2);
+      this.eventMode = "static";
+
+      this.hasMoved = true;
+      this.emit("moved", this);
+    }
+  }
 
   private onRightDragEnd = () => {
     if (this.isRightDragging) {

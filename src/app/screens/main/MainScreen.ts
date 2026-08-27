@@ -9,6 +9,7 @@ import { Unit } from "./Unit";
 import { BattlePane } from "./Battle";
 import { Hud } from "./HUD";
 import { C } from "../../common";
+import { AIController, isAIEnabled } from "../../ai/AIController";
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -164,7 +165,7 @@ export class MainScreen extends Container {
     placeTeamUnits(red, "red");
   }
 
-  private checkCityOccupancy() {
+  public checkCityOccupancy() {
     this.tiles.forEach((tile) => {
       if (tile.tileType === TileType.C) {
         const occupant = tile.children.find((child) => child instanceof Unit && !child.isDead) as Unit | undefined;
@@ -175,10 +176,12 @@ export class MainScreen extends Container {
     });
   }
 
-  private updateUnitInteractivity() {
+  public updateUnitInteractivity() {
     let allMoved = true;
+    const isAITurn = this.currentTurn === "red" && isAIEnabled();
+
     this.allUnits.forEach((u) => {
-      if (u.team === this.currentTurn) {
+      if (u.team === this.currentTurn && !isAITurn) {
         if (u.hasMoved && u.hasAttacked) {
           u.eventMode = "none";
           u.alpha = 0.5;
@@ -189,19 +192,34 @@ export class MainScreen extends Container {
         }
       } else {
         u.eventMode = "none";
-        u.alpha = 1;
+        u.alpha = u.hasMoved && u.hasAttacked ? 0.5 : 1;
       }
     });
 
-    // if (allMoved && this.allUnits.length > 0) {
-    //   this.turnText.text = `${this.currentTurn.toUpperCase()} Team - All units moved!`;
-    // }
     console.log(allMoved);
   }
 
   private onUnitMoved() {
     this.checkCityOccupancy();
     this.updateUnitInteractivity();
+  }
+
+  public getBoardTiles(): Map<string, Tile> {
+    return this.tiles;
+  }
+
+  public getAllUnits(): Unit[] {
+    return this.allUnits;
+  }
+
+  public async executeBattle(attacker: Unit, target: Unit): Promise<void> {
+    await this.battlePane.battle(attacker, target);
+    this.checkCityOccupancy();
+    this.updateUnitInteractivity();
+  }
+
+  public async aiEndTurn(): Promise<void> {
+    await this.endTurn();
   }
 
   private async endTurn() {
@@ -256,6 +274,18 @@ export class MainScreen extends Container {
       this.credits[this.currentTurn] += cityIncome;
       if (this.hud) {
         this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
+      }
+    }
+
+    // 4. If AI is enabled and it is Red team's turn, execute AI turn
+    if (this.currentTurn === "red" && isAIEnabled()) {
+      if (this.hud) {
+        this.hud.setEndTurnEnabled(false);
+      }
+      await AIController.runTurn(this);
+    } else {
+      if (this.hud) {
+        this.hud.setEndTurnEnabled(true);
       }
     }
   }

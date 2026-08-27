@@ -128,6 +128,11 @@ export class Hud extends Container {
     }
   }
 
+  public setEndTurnEnabled(enabled: boolean) {
+    this.endTurnButton.eventMode = enabled ? "static" : "none";
+    this.endTurnButton.alpha = enabled ? 1 : 0.5;
+  }
+
   public resize(width: number, height: number) {
     this.endTurnButton.position.set(width - 170, height - 70);
   }
