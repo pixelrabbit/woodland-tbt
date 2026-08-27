@@ -90,7 +90,6 @@ export const UNIT: Record<U, IUnit> = {
 
 export class Unit extends Container {
   sprite: Sprite;
-  public teamBg: Graphics;
   private isDragging: boolean = false;
   private isRightDragging: boolean = false;
   private healthText?: Text;
@@ -117,16 +116,15 @@ export class Unit extends Container {
 
   set team(value: "blue" | "red") {
     this._team = value;
-    const color = value === "blue" ? C.blue : C.red;
-    if (this.teamBg) {
-      this.teamBg.clear().circle(0, 0, 21).fill(color);
-    }
-    if (this.healthBg) {
-      this.healthBg.clear().rect(8, 16, 24, 16).fill(color);
-    }
+    this.updateHealthVisuals();
+    this.updateTeamTexture();
     if (this.sprite) {
       this.sprite.scale.x = value === "red" ? -Math.abs(this.sprite.scale.x) : Math.abs(this.sprite.scale.x);
     }
+  }
+
+  public updateTeamTexture() {
+    // Overridden by subclasses with team-specific sprites
   }
 
   constructor(type: U, x: number, y: number, texture?: Texture) {
@@ -135,35 +133,17 @@ export class Unit extends Container {
     this.moveRange = UNIT[type].moveRange;
     this.moveType = UNIT[type].moveType;
     this.attackRange = UNIT[type].attackRange;
-    this.health = UNIT[type].health;
     this.unitType = type;
 
     this.position.set(x, y);
-
-    // Team color background circle (66% diameter, centered)
-    this.teamBg = new Graphics().circle(0, 0, 21).fill(this._team === "blue" ? C.blue : C.red);
-    this.addChild(this.teamBg);
 
     this.sprite = new Sprite(texture);
     this.sprite.anchor.set(0.5);
     this.sprite.setSize(Tile.TILE_SIZE);
     this.addChild(this.sprite);
 
-    // Health indicator background (16x16 box placed at the bottom right)
-    this.healthBg = new Graphics().rect(8, 16, 24, 16).fill(0x000000);
-    this.addChild(this.healthBg);
-
-    this.healthText = new Text({
-      text: Math.ceil(this._health / 10).toString(),
-      style: {
-        fontSize: 16,
-        fill: 0xffffff,
-        fontFamily: "Jersey 25",
-      },
-    });
-    this.healthText.anchor.set(0.5);
-    this.healthText.position.set(20, 24); // Centered within the 16x16 box
-    this.addChild(this.healthText);
+    // Initialize health badge via setter
+    this.health = UNIT[type].health;
 
     // Make unit interactive
     this.eventMode = "static";
@@ -461,15 +441,36 @@ export class Unit extends Container {
     }
   };
 
+  public updateHealthVisuals() {
+    if (!this.healthBg) {
+      this.healthBg = new Graphics();
+      this.addChild(this.healthBg);
+    }
+    if (!this.healthText) {
+      this.healthText = new Text({
+        style: {
+          fontSize: 16,
+          fill: 0xffffff,
+          fontFamily: "Jersey 25",
+        },
+      });
+      this.healthText.anchor.set(0.5);
+      this.healthText.position.set(18, 24);
+      this.addChild(this.healthText);
+    }
+
+    const teamColor = this._team === "blue" ? C.blue : C.red;
+    this.healthBg.clear().rect(8, 16, 20, 16).fill(teamColor);
+    this.healthText.text = Math.ceil(this._health / 10).toString();
+  }
+
   get health(): number {
     return this._health;
   }
 
   set health(value: number) {
     this._health = value;
-    if (this.healthText) {
-      this.healthText.text = Math.ceil(value / 10);
-    }
+    this.updateHealthVisuals();
 
     if (this._health <= 0 && !this.isDead) {
       this.isDead = true;
@@ -493,19 +494,31 @@ export class Unit extends Container {
   }
 }
 
-const infantrySprite = await Assets.load("assets/main/soldier.png");
+const infantryBlueSprite = await Assets.load("assets/units/infantry-blue.png");
+const infantryRedSprite = await Assets.load("assets/units/infantry-red.png");
 export class Infantry extends Unit {
   constructor(x: number, y: number) {
-    // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
-    super(U.Infantry, x, y, infantrySprite);
+    super(U.Infantry, x, y, infantryBlueSprite);
+  }
+
+  public override updateTeamTexture() {
+    if (this.sprite) {
+      this.sprite.texture = this.team === "blue" ? infantryBlueSprite : infantryRedSprite;
+    }
   }
 }
 
-const commandoSprite = await Assets.load("assets/main/commando.png");
+const commandoBlueSprite = await Assets.load("assets/units/commando-blue.png");
+const commandoRedSprite = await Assets.load("assets/units/commando-red.png");
 export class Commando extends Unit {
   constructor(x: number, y: number) {
-    // Call the parent Unit constructor, hardcoding the Infantry type and passing the texture
-    super(U.Commando, x, y, commandoSprite);
+    super(U.Commando, x, y, commandoBlueSprite);
+  }
+
+  public override updateTeamTexture() {
+    if (this.sprite) {
+      this.sprite.texture = this.team === "blue" ? commandoBlueSprite : commandoRedSprite;
+    }
   }
 }
 

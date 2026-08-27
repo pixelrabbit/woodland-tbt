@@ -11,16 +11,17 @@ export const PANE_WIDTH = BATTLE_WIDTH / 2;
 export const PANEL_HEIGHT = BATTLE_HEIGHT;
 export const BORDER_WIDTH = 8;
 
-const bgPlain = await Assets.load("assets/main/pane-grass.png");
+const bgGrass = await Assets.load("assets/main/pane-grass.png");
 const bgForest = await Assets.load("assets/main/pane-forest.png");
 const bgMountain = await Assets.load("assets/main/pane-mountain.png");
 const bgCity = await Assets.load("assets/main/pane-city.png");
 
 const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
-  [TileType.P]: bgPlain,
+  [TileType.G]: bgGrass,
   [TileType.F]: bgForest,
   [TileType.M]: bgMountain,
   [TileType.C]: bgCity,
+  [TileType.R]: bgGrass,
 };
 
 export interface SlotCoordinate {
@@ -33,7 +34,14 @@ export interface SlotCoordinate {
  * Defined for a standard left pane (600x800). Right pane automatically mirrors X coordinates.
  */
 export const TERRAIN_SLOT_POSITIONS: Record<TileType, SlotCoordinate[]> = {
-  [TileType.P]: [
+  [TileType.G]: [
+    { x: 400, y: 350 },
+    { x: 400, y: 500 },
+    { x: 400, y: 650 },
+    { x: 200, y: 425 },
+    { x: 200, y: 575 },
+  ],
+  [TileType.R]: [
     { x: 400, y: 350 },
     { x: 400, y: 500 },
     { x: 400, y: 650 },
@@ -81,11 +89,12 @@ export async function shake(element: Container, intensity = 18, duration = 0.3, 
   const steps = 10;
   const stepDuration = duration / steps;
 
-  let whiteFilter: ColorMatrixFilter | null = null;
+  let yellowFilter: ColorMatrixFilter | null = null;
   if (options.blink) {
-    whiteFilter = new ColorMatrixFilter();
-    whiteFilter.brightness(1.6, false);
-    whiteFilter.alpha = options.blinkStrength ?? 0.4;
+    yellowFilter = new ColorMatrixFilter();
+    // Balanced yellow damage flash (distinct hit-impact without harsh blowout)
+    yellowFilter.matrix = [1.35, 0, 0, 0, 0.18, 0, 1.35, 0, 0, 0.18, 0, 0, 0.3, 0, 0, 0, 0, 0, 1, 0];
+    yellowFilter.alpha = options.blinkStrength ?? 0.75;
   }
 
   for (let i = 0; i < steps; i++) {
@@ -96,8 +105,8 @@ export async function shake(element: Container, intensity = 18, duration = 0.3, 
     element.x = baseX + offsetX;
     element.y = baseY + offsetY;
 
-    if (whiteFilter) {
-      element.filters = i % 2 === 0 ? [whiteFilter] : [];
+    if (yellowFilter) {
+      element.filters = i % 2 === 0 ? [yellowFilter] : [];
     }
 
     await waitFor(stepDuration);
@@ -105,7 +114,7 @@ export async function shake(element: Container, intensity = 18, duration = 0.3, 
 
   element.x = baseX;
   element.y = baseY;
-  if (whiteFilter) {
+  if (yellowFilter) {
     element.filters = [];
   }
 }
@@ -116,17 +125,18 @@ class BattleModal extends Container {
   public border: Graphics;
   public unitsContainer: Container;
   public paneMask: Graphics;
-  // public typeText: Text;
   public healthText: Text;
-  // public terrainText: Text;
+  public defenseContainer: Container;
+  private defenseBg: Graphics;
   public defenseText: Text;
+  private defenseValue: number = 0;
   public unitSprites: Sprite[] = [];
   public bgColor: ColorSource = 0x000000;
   public borderColor: ColorSource = 0x000000;
   private originalTint: number = 0xffffff;
   private _currentHealth: number = 0;
   private targetHealth: number = 0;
-  private currentTerrain: TileType = TileType.P;
+  private currentTerrain: TileType = TileType.G;
   private isFlipped = false;
 
   get currentHealth(): number {
@@ -144,6 +154,7 @@ class BattleModal extends Container {
     this.isFlipped = flipped;
     this.updateBgLayout();
     this.positionSprites(PANE_WIDTH, PANEL_HEIGHT);
+    this.updateDefenseBadgeLayout();
   }
 
   private updateBgLayout() {
@@ -164,7 +175,7 @@ class BattleModal extends Container {
     this.bg = new Graphics().rect(0, 0, PANE_WIDTH, PANEL_HEIGHT);
     this.addChild(this.bg);
 
-    this.bgSprite = new Sprite(bgPlain);
+    this.bgSprite = new Sprite(bgGrass);
     this.updateBgLayout();
     this.addChild(this.bgSprite);
 
@@ -203,11 +214,36 @@ class BattleModal extends Container {
     this.healthText.position.set(centerX, 24);
     this.addChild(this.healthText);
 
-    // DEFENSE
-    this.defenseText = new Text({ text: "Defense:", style: textStyle });
-    this.defenseText.anchor.set(0.5, 0);
-    this.defenseText.position.set(centerX, 220);
-    this.addChild(this.defenseText);
+    // DEFENSE BADGE
+    this.defenseContainer = new Container();
+    this.defenseBg = new Graphics();
+    this.defenseText = new Text({
+      text: "DEF 0",
+      style: {
+        fill: 0xffffff,
+        fontSize: 24,
+        fontFamily: "Jersey 25",
+        fontWeight: "bold",
+      },
+    });
+    this.defenseText.anchor.set(0.5);
+    this.defenseContainer.addChild(this.defenseBg, this.defenseText);
+    this.addChild(this.defenseContainer);
+  }
+
+  private updateDefenseBadgeLayout() {
+    const badgeWidth = 80;
+    const badgeHeight = 40;
+    const padding = 0;
+
+    const x = this.isFlipped ? PANE_WIDTH - badgeWidth - padding : padding;
+    const y = PANEL_HEIGHT - badgeHeight - padding;
+    this.defenseContainer.position.set(x, y);
+
+    this.defenseText.text = `DEF ${this.defenseValue}`;
+    this.defenseText.position.set(badgeWidth / 2, badgeHeight / 2 - 2);
+
+    this.defenseBg.clear().rect(0, 0, badgeWidth, badgeHeight).fill(this.bgColor);
   }
 
   private removedSpritesToAnimate: Sprite[] = [];
@@ -223,7 +259,9 @@ class BattleModal extends Container {
     const tile = unit.parent as Tile | undefined;
     if (tile && tile.tileType && TILE_DATA[tile.tileType]) {
       this.currentTerrain = tile.tileType;
-      this.defenseText.text = `Defense: ${TILE_DATA[tile.tileType].defense}`;
+      this.defenseValue = TILE_DATA[tile.tileType].defense;
+    } else {
+      this.defenseValue = 0;
     }
 
     if (unit.sprite) {
@@ -276,6 +314,8 @@ class BattleModal extends Container {
       this.bgSprite.texture = bgTexture;
       this.updateBgLayout();
     }
+
+    this.updateDefenseBadgeLayout();
   }
 
   private getSpritePosition(index: number, width: number, height: number, terrain: TileType) {
@@ -382,7 +422,7 @@ class BattleModal extends Container {
     const centerX = PANE_WIDTH / 2;
     this.positionSprites(PANE_WIDTH, PANEL_HEIGHT);
     this.healthText.position.set(centerX, 24);
-    this.defenseText.position.set(centerX, 220);
+    this.updateDefenseBadgeLayout();
   }
 }
 

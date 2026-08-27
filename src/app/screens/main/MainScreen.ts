@@ -68,19 +68,19 @@ export class MainScreen extends Container {
   }
 
   private createGrid() {
-    const { W, P, M, F, C } = TileType;
+    const { W, G, M, F, C, R } = TileType;
     const grid: TileType[][] = [
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
-      [W, P, P, P, W, P, P, P, P, P, P, W, W, P, P, P, P, P, P, P, P, P, P, W],
-      [W, P, P, P, W, M, M, M, P, P, P, W, W, P, P, P, M, M, M, P, P, P, P, W],
-      [W, P, P, P, W, M, M, P, P, P, P, P, P, P, P, P, M, M, P, P, P, P, P, W],
-      [W, P, P, P, W, M, P, P, P, P, P, P, P, P, P, P, M, P, P, P, P, P, P, W],
-      [W, P, P, P, W, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, W],
-      [W, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, P, W],
-      [W, P, P, P, P, P, P, P, P, F, F, F, F, F, F, F, F, P, P, P, P, P, P, W],
-      [W, P, P, P, P, P, P, P, F, F, F, P, P, P, P, P, P, P, P, F, F, F, P, W],
-      [W, P, P, P, P, P, P, P, F, F, F, W, C, P, P, P, P, P, P, F, F, F, P, W],
-      [W, P, P, P, W, P, P, P, F, F, F, W, W, P, P, P, P, P, P, F, F, F, P, W],
+      [W, G, G, G, W, G, G, G, G, G, G, W, W, G, G, G, G, G, G, G, G, G, G, W],
+      [W, G, G, G, W, M, M, M, G, G, G, W, W, G, G, G, M, M, M, G, G, G, G, W],
+      [W, G, G, G, W, M, M, G, G, G, G, G, G, G, G, G, M, M, G, G, G, G, G, W],
+      [W, G, G, G, W, M, G, G, G, G, G, G, G, G, G, G, M, G, G, G, G, G, G, W],
+      [W, G, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, G, W],
+      [W, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, W],
+      [W, G, G, G, G, G, G, G, G, F, F, F, F, F, F, F, F, G, G, G, G, G, G, W],
+      [W, G, G, G, G, G, G, G, F, F, F, G, G, G, G, G, G, G, G, F, F, F, G, W],
+      [W, G, G, G, G, G, G, G, F, F, F, W, C, G, G, G, G, G, G, F, F, F, G, W],
+      [W, G, G, G, W, G, G, G, F, F, F, W, W, G, G, G, G, G, G, F, F, F, G, W],
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
     ];
 
@@ -224,32 +224,37 @@ export class MainScreen extends Container {
       }
     });
 
-    // When a team unit begins a turn on a city tile, advance capture progress by 1 box
+    if (this.hud) {
+      this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
+    }
+    this.updateUnitInteractivity();
+
+    // 1. Show turn banner and wait until it fully fades out
+    await this.showTurnBanner(this.currentTurn);
+
+    // 2. After banner fades out, advance city capture progress for occupying units
+    const capturePromises: Promise<void>[] = [];
     this.tiles.forEach((tile) => {
       if (tile.tileType === TileType.C) {
         const occupant = tile.children.find((child) => child instanceof Unit && !child.isDead) as Unit | undefined;
 
         if (occupant && occupant.team === this.currentTurn) {
           if (tile.captureTeam === this.currentTurn) {
-            tile.setCaptureProgress(this.currentTurn, tile.capturePoints + 1);
+            capturePromises.push(tile.setCaptureProgress(this.currentTurn, tile.capturePoints + 1));
           } else if (tile.captureTeam && tile.capturePoints > 0) {
-            tile.setCaptureProgress(tile.captureTeam, tile.capturePoints - 1);
+            capturePromises.push(tile.setCaptureProgress(tile.captureTeam, tile.capturePoints - 1));
           } else {
-            tile.setCaptureProgress(this.currentTurn, 1);
+            capturePromises.push(tile.setCaptureProgress(this.currentTurn, 1));
           }
         }
       }
     });
 
-    if (this.hud) {
-      this.hud.update(this.currentTurn, this.credits[this.currentTurn]);
+    if (capturePromises.length > 0) {
+      await Promise.all(capturePromises);
     }
-    this.updateUnitInteractivity();
 
-    // Show turn banner and wait until it fully fades out
-    await this.showTurnBanner(this.currentTurn);
-
-    // Add 1000 credits for each captured city (both boxes full) and trigger floating income animation
+    // 3. Add 1000 credits for each captured city (both boxes full) and trigger floating income animation
     let cityIncome = 0;
     this.tiles.forEach((tile) => {
       if (tile.tileType === TileType.C && tile.owner === this.currentTurn) {
