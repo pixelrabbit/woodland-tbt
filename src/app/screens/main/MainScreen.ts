@@ -9,7 +9,6 @@ import { Unit } from "./Unit";
 import { BattlePane } from "./Battle";
 import { Hud } from "./HUD";
 import { C } from "../../common";
-import { PausePopup } from "../../popups/PausePopup";
 
 /** The screen that holds the app */
 export class MainScreen extends Container {
@@ -31,18 +30,6 @@ export class MainScreen extends Container {
 
     // Prevent the default browser right-click menu from appearing
     document.addEventListener("contextmenu", (e) => e.preventDefault());
-
-    // Toggle pause with Keypad 0 TODO: not working
-    window.addEventListener("keydown", (e) => {
-      if (e.code === "Numpad0") {
-        const nav = engine().navigation;
-        if (nav.currentPopup instanceof PausePopup) {
-          nav.dismissPopup();
-        } else if (!nav.currentPopup) {
-          nav.presentPopup(PausePopup);
-        }
-      }
-    });
 
     this.mainContainer = new Container();
     this.mainContainer.sortableChildren = true;
@@ -71,6 +58,7 @@ export class MainScreen extends Container {
     const { W, G, M, F, C, R } = TileType;
     const grid: TileType[][] = [
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
+      [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
       [W, G, G, G, W, G, G, G, G, G, G, W, W, G, G, G, G, G, G, G, G, G, G, W],
       [W, G, G, G, W, M, M, M, G, G, G, W, W, G, G, G, M, M, M, G, G, G, G, W],
       [W, G, G, G, W, M, M, G, G, G, G, G, G, G, G, G, M, M, G, G, G, G, G, W],
@@ -81,6 +69,7 @@ export class MainScreen extends Container {
       [W, G, G, G, G, G, G, G, F, F, F, G, G, G, G, G, G, G, G, F, F, F, G, W],
       [W, G, G, G, G, G, G, G, F, F, F, W, C, G, G, G, G, G, G, F, F, F, G, W],
       [W, G, G, G, W, G, G, G, F, F, F, W, W, G, G, G, G, G, G, F, F, F, G, W],
+      [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
     ];
 
@@ -307,9 +296,16 @@ export class MainScreen extends Container {
   // public prepare() { }
 
   /** Update the screen */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public update(_time: Ticker) {
+  public update(time: Ticker) {
     if (this.paused) return;
+
+    // speed of tile diagonals
+    Tile.globalStripeOffset = (Tile.globalStripeOffset + time.deltaTime * -0.2) % 32;
+    this.tiles.forEach((tile) => {
+      if (tile.isHighlighted) {
+        tile.updateStripePosition(Tile.globalStripeOffset);
+      }
+    });
   }
 
   /** Resize the screen, fired whenever window size changes */

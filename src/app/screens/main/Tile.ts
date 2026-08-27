@@ -1,4 +1,4 @@
-import { Graphics, Sprite, Text, Assets, Container, Texture, type ColorSource } from "pixi.js";
+import { Graphics, Sprite, Text, Assets, Container, Texture, TilingSprite, type ColorSource } from "pixi.js";
 import { animate } from "motion";
 import { C, TILE_SIZE } from "../../common";
 
@@ -135,6 +135,32 @@ class CaptureBoxIndicator extends Container {
   }
 }
 
+function createDiagonalStripeTexture(): Texture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext("2d")!;
+
+  // 1. Semi-transparent white background base
+  ctx.fillStyle = "hsla(0, 0%, 100%, 0.15)";
+  ctx.fillRect(0, 0, 32, 32);
+
+  // 2. Bold repeating diagonal white stripes
+  ctx.strokeStyle = "hsla(0, 0%, 100%, 0.5)";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "square";
+
+  // Seamless 45-degree diagonal lines repeating every 16px
+  for (let c = -32; c <= 64; c += 16) {
+    ctx.beginPath();
+    ctx.moveTo(c, 0);
+    ctx.lineTo(c + 32, 32);
+    ctx.stroke();
+  }
+
+  return Texture.from(canvas);
+}
+
 export class Tile extends Container {
   public readonly tileType: TileType;
   public readonly id: string;
@@ -143,9 +169,11 @@ export class Tile extends Container {
   public static readonly TILE_SIZE = TILE_SIZE;
   public readonly movementCost: MovementCost;
   public static showCoordinates = false;
+  public static globalStripeOffset = 0;
+  private static stripeTexture?: Texture;
   private _state = "default";
   private _isHovered = false;
-  private highlight: Graphics;
+  private stripeHighlight: TilingSprite;
   private hoverReticle: Graphics;
   // private hoverOutline: Graphics;
   sprite: Sprite;
@@ -182,10 +210,18 @@ export class Tile extends Container {
       this.addChild(coordinatesText);
     }
 
-    // range highlight
-    this.highlight = new Graphics().rect(0, 0, Tile.TILE_SIZE, Tile.TILE_SIZE).fill({ color: 0xffffff, alpha: 0.35 });
-    this.highlight.visible = false;
-    this.addChild(this.highlight);
+    // Reusable animated diagonal striped highlight (tinted yellow for movement, red for attack)
+    if (!Tile.stripeTexture) {
+      Tile.stripeTexture = createDiagonalStripeTexture();
+    }
+    this.stripeHighlight = new TilingSprite({
+      texture: Tile.stripeTexture,
+      width: Tile.TILE_SIZE,
+      height: Tile.TILE_SIZE,
+    });
+    this.stripeHighlight.visible = false;
+    this.stripeHighlight.zIndex = 10;
+    this.addChild(this.stripeHighlight);
 
     // hover reticle
     const length = 16;
@@ -227,17 +263,28 @@ export class Tile extends Container {
     }
   }
 
+  public get isHighlighted(): boolean {
+    return this.stripeHighlight.visible;
+  }
+
+  public updateStripePosition(globalOffset: number) {
+    this.stripeHighlight.tilePosition.x = globalOffset - this.gridX * Tile.TILE_SIZE;
+    this.stripeHighlight.tilePosition.y = -this.gridY * Tile.TILE_SIZE;
+  }
+
   private updateVisuals() {
-    this.highlight.visible = false;
+    this.stripeHighlight.visible = false;
     this.hoverReticle.visible = false;
     this.hoverReticle.tint = 0xffffff;
 
     if (this._state === "canMoveTo" || this._state === "hover" || this._state === "path") {
-      this.highlight.tint = 0xffff00;
-      this.highlight.visible = true;
+      this.stripeHighlight.tint = 0xffff00; // Yellow stripes for movement
+      this.stripeHighlight.visible = true;
+      this.updateStripePosition(Tile.globalStripeOffset);
     } else if (this._state === "canAttack" || this._state === "attackHover") {
-      this.highlight.tint = 0xff0000;
-      this.highlight.visible = true;
+      this.stripeHighlight.tint = 0xff2222; // Red stripes for attack
+      this.stripeHighlight.visible = true;
+      this.updateStripePosition(Tile.globalStripeOffset);
     }
 
     if (this._isHovered || this._state === "hover" || this._state === "attackHover") {

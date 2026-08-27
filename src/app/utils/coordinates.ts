@@ -68,6 +68,11 @@ export function getReachableTiles(
     }
   }
 
+  const startTile = tiles.get(startId);
+  if (startTile) {
+    reachable.delete(startTile);
+  }
+
   return Array.from(reachable);
 }
 
@@ -83,7 +88,8 @@ export function getAttackableTiles(
   const attackable: Tile[] = [];
   for (let dx = -attackRange; dx <= attackRange; dx++) {
     for (let dy = -attackRange; dy <= attackRange; dy++) {
-      if (Math.abs(dx) + Math.abs(dy) <= attackRange) {
+      const dist = Math.abs(dx) + Math.abs(dy);
+      if (dist > 0 && dist <= attackRange) {
         const tile = tiles.get(`${startX + dx}_${startY + dy}`);
         if (tile) attackable.push(tile);
       }

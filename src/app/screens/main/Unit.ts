@@ -145,7 +145,8 @@ export class Unit extends Container {
     // Initialize health badge via setter
     this.health = UNIT[type].health;
 
-    // Make unit interactive
+    // Make unit interactive and render above tile highlights
+    this.zIndex = 200;
     this.eventMode = "static";
     this.cursor = "pointer";
 
@@ -349,15 +350,20 @@ export class Unit extends Container {
 
   private updatePathVisuals() {
     if (!this.boardTiles) return;
+    const parentTile = this.parent as Tile;
     this.boardTiles.forEach((t) => (t.state = "default"));
-    // Highlight all reachable tiles in yellow
+    // Highlight all reachable tiles in yellow (excluding starting tile)
     this.reachableTiles.forEach((t) => {
-      t.state = "canMoveTo";
+      if (t !== parentTile) {
+        t.state = "canMoveTo";
+      }
     });
-    // Set destination tile to hover (displays hover reticle)
+    // Set destination tile to hover (displays hover reticle) if not starting tile
     if (this.currentPath.length > 0) {
       const targetTile = this.currentPath[this.currentPath.length - 1];
-      targetTile.state = "hover";
+      if (targetTile !== parentTile) {
+        targetTile.state = "hover";
+      }
     }
     // Draw the arrow path
     this.drawArrowPath(this.currentPath);
@@ -400,7 +406,7 @@ export class Unit extends Container {
               const stepTile = path[i];
               const targetX = stepTile.x + Tile.TILE_SIZE / 2;
               const targetY = stepTile.y + Tile.TILE_SIZE / 2;
-              await animate(this as Container, { x: targetX, y: targetY }, { duration: 0.1, ease: "linear" });
+              await animate(this as Container, { x: targetX, y: targetY }, { duration: 0.15, ease: "linear" });
             }
 
             // Re-parent back to the target tile after animation

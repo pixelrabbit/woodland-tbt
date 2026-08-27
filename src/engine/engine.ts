@@ -1,10 +1,5 @@
 import { sound } from "@pixi/sound";
-import type {
-  ApplicationOptions,
-  DestroyOptions,
-  AssetsBundle,
-  RendererDestroyOptions,
-} from "pixi.js";
+import type { ApplicationOptions, DestroyOptions, AssetsBundle, RendererDestroyOptions } from "pixi.js";
 import { Application, Assets, extensions, ResizePlugin } from "pixi.js";
 import "pixi.js/app";
 
@@ -47,6 +42,9 @@ export class CreationEngine extends Application {
     // Add a visibility listener, so the app can pause sounds and screens
     document.addEventListener("visibilitychange", this.visibilityChange);
 
+    // Wait for web fonts to load
+    await this.loadFonts();
+
     // Init PixiJS assets with this asset manifest
     await Assets.init({ manifest, basePath: "assets" });
     await Assets.loadBundle("preload");
@@ -57,9 +55,24 @@ export class CreationEngine extends Application {
     Assets.backgroundLoadBundle(allBundles);
   }
 
+  /** Ensure required web fonts are loaded before screens render */
+  private async loadFonts(): Promise<void> {
+    if (typeof document !== "undefined" && "fonts" in document) {
+      try {
+        await Promise.all([
+          document.fonts.load('24px "Jersey 25"'),
+          document.fonts.load('bold 24px "Jersey 25"'),
+          document.fonts.ready,
+        ]);
+      } catch (error) {
+        console.warn("Failed to load fonts:", error);
+      }
+    }
+  }
+
   public override destroy(
     rendererDestroyOptions: RendererDestroyOptions = false,
-    options: DestroyOptions = false,
+    options: DestroyOptions = false
   ): void {
     document.removeEventListener("visibilitychange", this.visibilityChange);
     super.destroy(rendererDestroyOptions, options);
