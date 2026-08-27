@@ -7,6 +7,8 @@ import "pixi.js/app";
 // @ts-ignore - This is a dynamically generated file by AssetPack
 import manifest from "../manifest.json";
 
+import { getAssetUrl } from "../app/common";
+
 import { CreationAudioPlugin } from "./audio/AudioPlugin";
 import { CreationNavigationPlugin } from "./navigation/NavigationPlugin";
 import { CreationResizePlugin } from "./resize/ResizePlugin";
@@ -46,7 +48,7 @@ export class CreationEngine extends Application {
     await this.loadFonts();
 
     // Init PixiJS assets with this asset manifest
-    await Assets.init({ manifest, basePath: "/assets" });
+    await Assets.init({ manifest, basePath: getAssetUrl("assets") });
     await Assets.loadBundle("preload");
 
     // List all existing bundles names

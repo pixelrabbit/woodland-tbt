@@ -22,6 +22,7 @@ function gameRoutePlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "./",
   plugins: [assetpackPlugin(), gameRoutePlugin()],
   appType: "mpa",
   server: {

@@ -1,7 +1,7 @@
 import { Container, Graphics, Text, Sprite, Assets, Texture, ColorMatrixFilter, type ColorSource } from "pixi.js";
 import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
-import { C } from "../../common";
+import { C, getAssetUrl } from "../../common";
 import { Unit, UNIT } from "./Unit";
 import { Tile, TILE_DATA, TileType } from "./Tile";
 
@@ -11,10 +11,10 @@ export const PANE_WIDTH = BATTLE_WIDTH / 2;
 export const PANEL_HEIGHT = BATTLE_HEIGHT;
 export const BORDER_WIDTH = 8;
 
-const bgGrass = await Assets.load("/assets/main/pane-grass.png");
-const bgForest = await Assets.load("/assets/main/pane-forest.png");
-const bgMountain = await Assets.load("/assets/main/pane-mountain.png");
-const bgCity = await Assets.load("/assets/main/pane-city.png");
+const bgGrass = await Assets.load(getAssetUrl("assets/main/pane-grass.png"));
+const bgForest = await Assets.load(getAssetUrl("assets/main/pane-forest.png"));
+const bgMountain = await Assets.load(getAssetUrl("assets/main/pane-mountain.png"));
+const bgCity = await Assets.load(getAssetUrl("assets/main/pane-city.png"));
 
 const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
   [TileType.G]: bgGrass,
