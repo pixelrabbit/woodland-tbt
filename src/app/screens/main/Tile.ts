@@ -25,12 +25,12 @@ export interface TileData {
 }
 
 // A cache for generated textures
-const textureGrass = await Assets.load("assets/tiles/grass.png");
-const textureWater = await Assets.load("assets/tiles/water.jpg");
-const textureMountain = await Assets.load("assets/tiles/mountain.png");
-const textureForest = await Assets.load("assets/tiles/forest.png");
-const textureCity = await Assets.load("assets/tiles/city.png");
-const textureRoad = await Assets.load("assets/tiles/road.png");
+const textureGrass = await Assets.load("/assets/tiles/grass.png");
+const textureWater = await Assets.load("/assets/tiles/water.jpg");
+const textureMountain = await Assets.load("/assets/tiles/mountain.png");
+const textureForest = await Assets.load("/assets/tiles/forest.png");
+const textureCity = await Assets.load("/assets/tiles/city.png");
+const textureRoad = await Assets.load("/assets/tiles/road.png");
 
 export const TILE_DATA: Record<TileType, TileData> = {
   [TileType.G]: {

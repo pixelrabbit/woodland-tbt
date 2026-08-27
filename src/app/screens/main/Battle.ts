@@ -11,10 +11,10 @@ export const PANE_WIDTH = BATTLE_WIDTH / 2;
 export const PANEL_HEIGHT = BATTLE_HEIGHT;
 export const BORDER_WIDTH = 8;
 
-const bgGrass = await Assets.load("assets/main/pane-grass.png");
-const bgForest = await Assets.load("assets/main/pane-forest.png");
-const bgMountain = await Assets.load("assets/main/pane-mountain.png");
-const bgCity = await Assets.load("assets/main/pane-city.png");
+const bgGrass = await Assets.load("/assets/main/pane-grass.png");
+const bgForest = await Assets.load("/assets/main/pane-forest.png");
+const bgMountain = await Assets.load("/assets/main/pane-mountain.png");
+const bgCity = await Assets.load("/assets/main/pane-city.png");
 
 const TERRAIN_BG: Partial<Record<TileType, Texture>> = {
   [TileType.G]: bgGrass,

@@ -502,8 +502,8 @@ export class Unit extends Container {
   }
 }
 
-const infantryBlueSprite = await Assets.load("assets/units/infantry-blue.png");
-const infantryRedSprite = await Assets.load("assets/units/infantry-red.png");
+const infantryBlueSprite = await Assets.load("/assets/units/infantry-blue.png");
+const infantryRedSprite = await Assets.load("/assets/units/infantry-red.png");
 export class Infantry extends Unit {
   constructor(x: number, y: number) {
     super(U.Infantry, x, y, infantryBlueSprite);
@@ -516,8 +516,8 @@ export class Infantry extends Unit {
   }
 }
 
-const commandoBlueSprite = await Assets.load("assets/units/commando-blue.png");
-const commandoRedSprite = await Assets.load("assets/units/commando-red.png");
+const commandoBlueSprite = await Assets.load("/assets/units/commando-blue.png");
+const commandoRedSprite = await Assets.load("/assets/units/commando-red.png");
 export class Commando extends Unit {
   constructor(x: number, y: number) {
     super(U.Commando, x, y, commandoBlueSprite);
@@ -530,7 +530,7 @@ export class Commando extends Unit {
   }
 }
 
-const tankSprite = await Assets.load("assets/main/tank.png");
+const tankSprite = await Assets.load("/assets/main/tank.png");
 export class Tank extends Unit {
   constructor(x: number, y: number) {
     // Call the parent Unit constructor, passing the tank type and texture
@@ -538,7 +538,7 @@ export class Tank extends Unit {
   }
 }
 
-const reconSprite = await Assets.load("assets/main/recon.png");
+const reconSprite = await Assets.load("/assets/main/recon.png");
 export class Recon extends Unit {
   constructor(x: number, y: number) {
     super(U.recon, x, y, reconSprite);
@@ -546,7 +546,7 @@ export class Recon extends Unit {
   }
 }
 
-const artillerySprite = await Assets.load("assets/main/artillery.png");
+const artillerySprite = await Assets.load("/assets/main/artillery.png");
 export class Artillery extends Unit {
   constructor(x: number, y: number) {
     super(U.artillery, x, y, artillerySprite);

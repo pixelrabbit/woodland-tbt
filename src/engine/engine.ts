@@ -46,7 +46,7 @@ export class CreationEngine extends Application {
     await this.loadFonts();
 
     // Init PixiJS assets with this asset manifest
-    await Assets.init({ manifest, basePath: "assets" });
+    await Assets.init({ manifest, basePath: "/assets" });
     await Assets.loadBundle("preload");
 
     // List all existing bundles names

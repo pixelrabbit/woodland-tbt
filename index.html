@@ -9,14 +9,378 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Jersey+25&display=swap" rel="stylesheet" />
 
-    <link rel="stylesheet" href="/style.css" />
-    <title>Woodland War</title>
+    <title>Woodland War - Strategy Game</title>
+    <style>
+      @font-face {
+        font-family: "Jersey 25";
+        src: url("/assets/fonts/Jersey25-Regular.ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Jersey 25", sans-serif;
+        background-color: #0d1117;
+        color: #ffffff;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background-image:
+          radial-gradient(circle at 50% 20%, rgba(46, 117, 89, 0.25) 0%, transparent 60%),
+          linear-gradient(180deg, #090c10 0%, #161b22 100%);
+        background-attachment: fixed;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 680px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 8px;
+      }
+
+      .title {
+        font-size: 64px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #ffffff;
+        text-shadow:
+          0 4px 0 #000000,
+          0 0 20px rgba(56, 189, 248, 0.4);
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+
+      .subtitle {
+        font-size: 24px;
+        color: #94a3b8;
+        letter-spacing: 1px;
+      }
+
+      .menu-grid {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .menu-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 22px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 2px solid #334155;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #ffffff;
+        transition: all 0.15s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+      }
+
+      .menu-card:hover {
+        transform: translateY(-2px);
+        background: rgba(51, 65, 85, 0.9);
+        border-color: #38bdf8;
+        box-shadow: 0 6px 16px rgba(56, 189, 248, 0.25);
+      }
+
+      .card-left {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .card-title {
+        font-size: 32px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .card-desc {
+        font-size: 18px;
+        color: #94a3b8;
+      }
+
+      .card-badge {
+        font-size: 20px;
+        padding: 4px 12px;
+        border-radius: 4px;
+        background: #1e293b;
+        border: 1px solid #475569;
+        color: #38bdf8;
+        text-transform: uppercase;
+      }
+
+      .card-pvp {
+        border-color: #3b82f6;
+        background: rgba(30, 58, 138, 0.4);
+      }
+
+      .card-pvp:hover {
+        border-color: #60a5fa;
+        box-shadow: 0 6px 16px rgba(96, 165, 250, 0.3);
+      }
+
+      .card-pvp .card-badge {
+        background: #1e3a8a;
+        border-color: #3b82f6;
+        color: #93c5fd;
+      }
+
+      .card-aggressive {
+        border-color: #ef4444;
+      }
+
+      .card-aggressive:hover {
+        border-color: #f87171;
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+      }
+
+      .card-aggressive .card-badge {
+        background: #7f1d1d;
+        border-color: #ef4444;
+        color: #fca5a5;
+      }
+
+      .card-defensive {
+        border-color: #10b981;
+      }
+
+      .card-defensive:hover {
+        border-color: #34d399;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+      }
+
+      .card-defensive .card-badge {
+        background: #064e3b;
+        border-color: #10b981;
+        color: #6ee7b7;
+      }
+
+      .card-rusher {
+        border-color: #eab308;
+      }
+
+      .card-rusher:hover {
+        border-color: #facc15;
+        box-shadow: 0 6px 16px rgba(234, 179, 8, 0.3);
+      }
+
+      .card-rusher .card-badge {
+        background: #713f12;
+        border-color: #eab308;
+        color: #fde047;
+      }
+
+      /* Custom AI Accordion */
+      .custom-section {
+        width: 100%;
+        background: rgba(15, 23, 42, 0.85);
+        border: 2px solid #334155;
+        border-radius: 8px;
+        padding: 16px 22px;
+      }
+
+      .custom-summary {
+        font-size: 26px;
+        color: #f8fafc;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .custom-controls {
+        margin-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .control-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .control-label {
+        font-size: 20px;
+        min-width: 140px;
+        color: #cbd5e1;
+      }
+
+      .control-slider {
+        flex: 1;
+        accent-color: #38bdf8;
+        cursor: pointer;
+      }
+
+      .control-val {
+        font-size: 20px;
+        min-width: 40px;
+        text-align: right;
+        color: #38bdf8;
+      }
+
+      .btn-launch {
+        margin-top: 8px;
+        width: 100%;
+        padding: 12px;
+        font-family: "Jersey 25", sans-serif;
+        font-size: 26px;
+        background: #0284c7;
+        color: #ffffff;
+        border: 2px solid #38bdf8;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+      }
+
+      .btn-launch:hover {
+        background: #0369a1;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      }
+
+      .footer {
+        font-size: 16px;
+        color: #64748b;
+        text-align: center;
+      }
+    </style>
   </head>
 
   <body>
-    <div id="app">
-      <div id="pixi-container"></div>
+    <div class="container">
+      <div class="header">
+        <h1 class="title">Woodland TBS</h1>
+        <p class="subtitle">Turn-Based Tactical Strategy</p>
+      </div>
+
+      <div class="menu-grid">
+        <!-- 2 Player Local -->
+        <a href="/game/" class="menu-card card-pvp">
+          <div class="card-left">
+            <div class="card-title">2-Player Local</div>
+            <div class="card-desc">Pass and play on the same screen with a friend.</div>
+          </div>
+        </a>
+
+        <!-- AI Balanced -->
+        <a href="/game/?ai=balanced" class="menu-card">
+          <div class="card-left">
+            <div class="card-title">VS AI: Balanced</div>
+            <div class="card-desc">Tactical computer opponent with balanced offense and cover.</div>
+          </div>
+        </a>
+
+        <!-- AI Aggressive -->
+        <a href="/game/?ai=aggressive" class="menu-card card-aggressive">
+          <div class="card-left">
+            <div class="card-title">VS AI: Aggressive</div>
+            <div class="card-desc">Relentless offense focused on destroying your units.</div>
+          </div>
+        </a>
+
+        <!-- AI Defensive -->
+        <a href="/game/?ai=defensive" class="menu-card card-defensive">
+          <div class="card-left">
+            <div class="card-title">VS AI: Defensive</div>
+            <div class="card-desc">Digs into Mountains, Forests, and Cities for heavy damage reduction.</div>
+          </div>
+        </a>
+
+        <!-- AI City Rusher -->
+        <a href="/game/?ai=rusher" class="menu-card card-rusher">
+          <div class="card-left">
+            <div class="card-title">VS AI: City Rusher</div>
+            <div class="card-desc">High-priority expansion focused on seizing cities and team income.</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Custom AI Tuning -->
+      <details class="custom-section">
+        <summary class="custom-summary">
+          <span>⚙️ Custom AI Match</span>
+          <span style="font-size: 18px; color: #94a3b8">(Click to expand)</span>
+        </summary>
+        <div class="custom-controls">
+          <div class="control-row">
+            <span class="control-label">Aggression</span>
+            <input id="in-aggression" class="control-slider" type="range" min="0.5" max="2.5" step="0.1" value="1.0" />
+            <span id="val-aggression" class="control-val">1.0</span>
+          </div>
+          <div class="control-row">
+            <span class="control-label">Defensiveness</span>
+            <input id="in-defense" class="control-slider" type="range" min="0.5" max="3.0" step="0.1" value="1.0" />
+            <span id="val-defense" class="control-val">1.0</span>
+          </div>
+          <div class="control-row">
+            <span class="control-label">Caution</span>
+            <input id="in-caution" class="control-slider" type="range" min="0.2" max="2.5" step="0.1" value="1.0" />
+            <span id="val-caution" class="control-val">1.0</span>
+          </div>
+          <div class="control-row">
+            <span class="control-label">City Priority</span>
+            <input id="in-city" class="control-slider" type="range" min="0.5" max="3.0" step="0.1" value="1.0" />
+            <span id="val-city" class="control-val">1.0</span>
+          </div>
+          <div class="control-row">
+            <span class="control-label">Animation Delay</span>
+            <input id="in-delay" class="control-slider" type="range" min="0.05" max="0.6" step="0.05" value="0.3" />
+            <span id="val-delay" class="control-val">0.3s</span>
+          </div>
+          <button id="btn-custom" class="btn-launch">Launch Custom Match ⚔️</button>
+        </div>
+      </details>
     </div>
-    <script type="module" src="/src/main.ts"></script>
+
+    <script>
+      function bindSlider(id, valId, suffix = "") {
+        const input = document.getElementById(id);
+        const display = document.getElementById(valId);
+        input.addEventListener("input", () => {
+          display.textContent = input.value + suffix;
+        });
+      }
+
+      bindSlider("in-aggression", "val-aggression");
+      bindSlider("in-defense", "val-defense");
+      bindSlider("in-caution", "val-caution");
+      bindSlider("in-city", "val-city");
+      bindSlider("in-delay", "val-delay", "s");
+
+      document.getElementById("btn-custom").addEventListener("click", () => {
+        const aggression = document.getElementById("in-aggression").value;
+        const defense = document.getElementById("in-defense").value;
+        const caution = document.getElementById("in-caution").value;
+        const city = document.getElementById("in-city").value;
+        const delay = document.getElementById("in-delay").value;
+
+        const url = `/game/?ai=true&aggression=${aggression}&defense=${defense}&caution=${caution}&city=${city}&delay=${delay}`;
+        window.location.href = url;
+      });
+    </script>
   </body>
 </html>
