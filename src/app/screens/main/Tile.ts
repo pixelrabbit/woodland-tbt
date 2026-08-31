@@ -1,4 +1,14 @@
-import { Graphics, Sprite, Text, Assets, Container, Texture, TilingSprite, type ColorSource } from "pixi.js";
+import {
+  Graphics,
+  Sprite,
+  Text,
+  Assets,
+  Container,
+  Texture,
+  TilingSprite,
+  Spritesheet,
+  type ColorSource,
+} from "pixi.js";
 import { animate } from "motion";
 import { C, TILE_SIZE } from "../../common";
 
@@ -24,13 +34,92 @@ export interface TileData {
   texture: Texture;
 }
 
+// Spritemap texture & inline atlas definition
+const spritemapTexture = await Assets.load("assets/tiles/tiles_spritemap.png");
+
+// Helper to define frames using grid multiples of 128 (e.g. x: 0, 1, 2)
+const frame = (x: number, y: number, w: number = 1, h: number = 1) => ({
+  frame: { x: x * 128, y: y * 128, w: w * 128, h: h * 128 },
+  sourceSize: { w: w * 128, h: h * 128 },
+  spriteSourceSize: { x: 0, y: 0, w: w * 128, h: h * 128 },
+});
+
+const spritemapAtlas = {
+  frames: {
+    grass: frame(1, 3),
+    forest: frame(0, 0),
+    water: frame(0, 5),
+    waterBR: frame(0, 2),
+    waterB: frame(1, 2),
+    waterBL: frame(2, 2),
+    waterR: frame(0, 3),
+    waterL: frame(2, 3),
+    waterTR: frame(0, 4),
+    waterT: frame(1, 4),
+    waterTL: frame(2, 4),
+    waterLTR: frame(3, 0),
+    waterLR: frame(3, 1),
+    waterLBR: frame(3, 2),
+    waterTLTR: frame(0, 6),
+    waterBLBR: frame(0, 7),
+  },
+  meta: {
+    image: "tiles_spritemap.png",
+    size: { w: 1280, h: 1280 },
+    scale: 1,
+  },
+};
+
+const tilesAtlas = new Spritesheet(spritemapTexture, spritemapAtlas);
+await tilesAtlas.parse();
+
 // A cache for generated textures
-const textureGrass = await Assets.load("assets/tiles/grass.png");
-const textureWater = await Assets.load("assets/tiles/water.jpg");
+const textureWater = tilesAtlas.textures?.["water"];
 const textureMountain = await Assets.load("assets/tiles/mountain.png");
-const textureForest = await Assets.load("assets/tiles/forest.png");
+const textureForest = tilesAtlas.textures?.["forest"];
 const textureCity = await Assets.load("assets/tiles/city.png");
 const textureRoad = await Assets.load("assets/tiles/road.png");
+
+export const WATER_TEXTURES = {
+  default: textureWater,
+};
+
+/**
+ * Returns the appropriate water tile texture based on relative direction from adjacent grass/land tiles.
+ */
+export function getWaterTexture(col: number, row: number, grid: TileType[][]): Texture {
+  const isGrass = (c: number, r: number) =>
+    r >= 0 && r < grid.length && c >= 0 && c < grid[0].length && grid[r][c] !== TileType.W;
+
+  const [L, R, T, B] = [isGrass(col - 1, row), isGrass(col + 1, row), isGrass(col, row - 1), isGrass(col, row + 1)];
+  const [TL, TR, BL, BR] = [
+    isGrass(col - 1, row - 1),
+    isGrass(col + 1, row - 1),
+    isGrass(col - 1, row + 1),
+    isGrass(col + 1, row + 1),
+  ];
+
+  let key: keyof typeof spritemapAtlas.frames = "water";
+
+  // Complex multi-side combinations
+  if (L && T && R) key = "waterLTR";
+  else if (L && B && R) key = "waterLBR";
+  else if (L && R) key = "waterLR";
+  else if (TL && TR && !T && !L && !R) key = "waterTLTR";
+  else if (BL && BR && !B && !L && !R) key = "waterBLBR";
+  // Cardinal directions
+  else if (R) key = "waterR";
+  else if (L) key = "waterL";
+  else if (T) key = "waterT";
+  else if (B) key = "waterB";
+  // Diagonal corners
+  else if (TR) key = "waterTR";
+  else if (TL) key = "waterTL";
+  else if (BR) key = "waterBR";
+  else if (BL) key = "waterBL";
+
+  return tilesAtlas.textures[key] ?? tilesAtlas.textures["water"];
+}
 
 export const TILE_DATA: Record<TileType, TileData> = {
   [TileType.G]: {
@@ -41,7 +130,7 @@ export const TILE_DATA: Record<TileType, TileData> = {
       tires: 2,
       air: 1,
     },
-    texture: textureGrass,
+    texture: tilesAtlas.textures["grass"],
   },
   [TileType.R]: {
     defense: 0,
@@ -178,7 +267,7 @@ export class Tile extends Container {
   // private hoverOutline: Graphics;
   sprite: Sprite;
 
-  constructor(type: TileType, x: number, y: number) {
+  constructor(type: TileType, x: number, y: number, customTexture?: Texture) {
     super();
     // id
     this.id = `${x}_${y}`;
@@ -191,7 +280,7 @@ export class Tile extends Container {
     this.sortableChildren = true;
     this.cursor = "default";
 
-    this.sprite = new Sprite(TILE_DATA[type]?.texture || textureWater);
+    this.sprite = new Sprite(customTexture || TILE_DATA[type]?.texture || textureWater);
     this.sprite.anchor.set(0);
     this.sprite.setSize(Tile.TILE_SIZE);
     this.addChild(this.sprite);

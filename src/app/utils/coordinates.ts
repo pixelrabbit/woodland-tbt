@@ -83,13 +83,14 @@ export function getAttackableTiles(
   startX: number,
   startY: number,
   attackRange: number,
-  tiles: Map<string, Tile>
+  tiles: Map<string, Tile>,
+  minAttackRange: number = 1
 ): Tile[] {
   const attackable: Tile[] = [];
   for (let dx = -attackRange; dx <= attackRange; dx++) {
     for (let dy = -attackRange; dy <= attackRange; dy++) {
       const dist = Math.abs(dx) + Math.abs(dy);
-      if (dist > 0 && dist <= attackRange) {
+      if (dist >= minAttackRange && dist <= attackRange) {
         const tile = tiles.get(`${startX + dx}_${startY + dy}`);
         if (tile) attackable.push(tile);
       }

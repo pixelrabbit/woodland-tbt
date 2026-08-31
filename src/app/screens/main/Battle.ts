@@ -533,7 +533,16 @@ export class BattlePane extends Container {
 
     // counter strike
     if (target.health > 0) {
-      await this.executeStrike(target, attacker, this.attackerModal);
+      const attackerTile = attacker.parent as Tile | undefined;
+      const targetTile = target.parent as Tile | undefined;
+      let canCounter = true;
+      if (attackerTile && targetTile) {
+        const dist = Math.abs(attackerTile.gridX - targetTile.gridX) + Math.abs(attackerTile.gridY - targetTile.gridY);
+        canCounter = dist >= target.minAttackRange && dist <= target.attackRange;
+      }
+      if (canCounter) {
+        await this.executeStrike(target, attacker, this.attackerModal);
+      }
     }
 
     await waitFor(2);

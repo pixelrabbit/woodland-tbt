@@ -1,3 +1,59 @@
+/**
+ * @file AIController.ts
+ *
+ * Automated Computer AI Controller for the Red Team in Woodland War.
+ *
+ * ============================================================================
+ * HOW THE AI CONTROLLER WORKS
+ * ============================================================================
+ *
+ * 1. ACTIVATION & CONFIGURATION
+ * ----------------------------------------------------------------------------
+ * The AI activates when the URL parameter `?ai` is present (e.g. `?ai`, `?ai=true`,
+ * `?ai=aggressive`, `?ai=defensive`, `?ai=rusher`). If no specific preset is
+ * given, it defaults to the `Balanced` personality profile.
+ *
+ * Fine-grained URL tuning knobs:
+ *   - `aggression` / `aggressiveness`: Scales offensive damage appetite.
+ *   - `defense` / `defensiveness`: Scales preference for high-defense terrain cover.
+ *   - `caution`: Penalty weight against receiving counter-damage and unit loss.
+ *   - `city` / `cityPriority`: Multiplier for capturing unowned/enemy cities.
+ *   - `delay` / `speed`: Animation pause duration (seconds) between unit turns.
+ *
+ * 2. TURN LIFECYCLE (`AIController.runTurn`)
+ * ----------------------------------------------------------------------------
+ * A. Profile Resolution:
+ *    Reads active personality preset and overrides from URL parameters.
+ * B. Action Evaluation & Reservation:
+ *    Loops over every living Red unit and evaluates all reachable tiles + attacks.
+ *    Reserves chosen destination tiles to prevent multiple AI units colliding.
+ * C. Priority Sorting:
+ *    Orders actions by tactical score: lethal strikes > artillery bombardment >
+ *    favorable trades > city captures > positional advances.
+ * D. Step-by-Step Animated Execution:
+ *    - Calls `unit.moveToTile(path)` to animate movement tile-by-tile.
+ *    - Calls `mainScreen.executeBattle(unit, target)` to show the battle modal.
+ *    - Updates city occupancy & dims acted units.
+ *    - Waits `profile.stepDelay` between steps for clear visual feedback.
+ * E. Turn Completion:
+ *    Calls `mainScreen.aiEndTurn()` to automatically pass control back to Blue.
+ *
+ * 3. TACTICAL DECISION ENGINE (`evaluateBestAction`)
+ * ----------------------------------------------------------------------------
+ * For each unit and every reachable candidate destination tile:
+ *   - Combat Prediction: Evaluates damage using weapon tables, attacker health,
+ *     and target terrain defense multiplier (10% reduction per defense point).
+ *   - Lethal Strike Bonus: +600 points for eliminating a unit (denying counter-attacks).
+ *   - Matchup Exploitation: Bonuses for hard counters (Commandos vs Tanks,
+ *     Tanks vs Infantry/Recon, Artillery safe ranged bombardments).
+ *   - Cover & Terrain Valuation: Rewards Mountains (+100), Cities (+75), Forests (+50).
+ *   - Counter-Attack & Self-Preservation: Penalizes incoming counter-damage and
+ *     applies a heavy penalty against suicidal attacks.
+ *   - City Objectives: +150 bonus for Infantry/Commandos capturing contested cities.
+ *   - Maneuvering / Advancing: If no attack is available, moves towards the closest
+ *     enemy or contested city, keeping Artillery at optimal stand-off range (2-3 tiles).
+ */
+
 import { waitFor } from "../../engine/utils/waitFor";
 import { Tile, TILE_DATA, TileType } from "../screens/main/Tile";
 import { Unit, UNIT, U } from "../screens/main/Unit";
@@ -193,7 +249,7 @@ export class AIController {
 
         if (currentTile && enemyTile) {
           const dist = getDistance(currentTile, enemyTile);
-          const inRange = unit.attackRange === 1 ? dist === 1 : dist > 0 && dist <= unit.attackRange;
+          const inRange = dist >= unit.minAttackRange && dist <= unit.attackRange;
 
           if (inRange) {
             await mainScreen.executeBattle(unit, targetEnemy);
@@ -273,7 +329,7 @@ export class AIController {
         if (!enemyTile) continue;
 
         const dist = getDistance(destTile, enemyTile);
-        const canAttack = unit.attackRange === 1 ? dist === 1 : dist > 0 && dist <= unit.attackRange;
+        const canAttack = dist >= unit.minAttackRange && dist <= unit.attackRange;
 
         if (canAttack) {
           foundAttack = true;
@@ -285,8 +341,8 @@ export class AIController {
           // Counter-damage Blue deals to Red
           let counterDamage = 0;
           if (!isLethal) {
-            // Ranged units don't receive melee counter if attacking from range
-            const canEnemyCounter = enemy.attackRange === 1 ? dist === 1 : dist <= enemy.attackRange;
+            // Check if enemy can counter-attack based on enemy's minAttackRange and attackRange
+            const canEnemyCounter = dist >= enemy.minAttackRange && dist <= enemy.attackRange;
             if (canEnemyCounter) {
               const remainingEnemyHealth = enemy.health - damageDealt;
               counterDamage = predictDamage(enemy.unitType, remainingEnemyHealth, unit.unitType, destTile.tileType);

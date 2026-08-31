@@ -3,7 +3,7 @@ import { Container, Graphics, Text } from "pixi.js";
 import { animate } from "motion";
 import { waitFor } from "../../../engine/utils/waitFor";
 import { engine } from "../../getEngine";
-import { Tile, TileType } from "./Tile";
+import { Tile, TileType, getWaterTexture } from "./Tile";
 import { Infantry, Commando, Tank, Recon, Artillery } from "./Unit";
 import { Unit } from "./Unit";
 import { BattlePane } from "./Battle";
@@ -47,6 +47,42 @@ export class MainScreen extends Container {
     this.battlePane = new BattlePane();
 
     this.addChild(this.battlePane);
+
+    this.setupNavigationConfirmation();
+  }
+
+  private setupNavigationConfirmation() {
+    if (
+      typeof window === "undefined" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"
+    ) {
+      return;
+    }
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Intercept browser back/forward navigation
+    try {
+      history.pushState(null, "", window.location.href);
+      const handlePopState = () => {
+        const leave = window.confirm("A game is currently in progress. Are you sure you want to leave?");
+        if (leave) {
+          window.removeEventListener("beforeunload", handleBeforeUnload);
+          window.removeEventListener("popstate", handlePopState);
+          history.back();
+        } else {
+          history.pushState(null, "", window.location.href);
+        }
+      };
+      window.addEventListener("popstate", handlePopState);
+    } catch {
+      // In case history API is restricted
+    }
   }
 
   private createUI() {
@@ -56,7 +92,7 @@ export class MainScreen extends Container {
   }
 
   private createGrid() {
-    const { W, G, M, F, C, R } = TileType;
+    const { W, G, M, F, C } = TileType;
     const grid: TileType[][] = [
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
@@ -64,11 +100,11 @@ export class MainScreen extends Container {
       [W, G, G, G, W, M, M, M, G, G, G, W, W, G, G, G, M, M, M, G, G, G, G, W],
       [W, G, G, G, W, M, M, G, G, G, G, G, G, G, G, G, M, M, G, G, G, G, G, W],
       [W, G, G, G, W, M, G, G, G, G, G, G, G, G, G, G, M, G, G, G, G, G, G, W],
-      [W, G, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, R, G, W],
+      [W, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, W],
       [W, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, G, W],
       [W, G, G, G, G, G, G, G, G, F, F, F, F, F, F, F, F, G, G, G, G, G, G, W],
       [W, G, G, G, G, G, G, G, F, F, F, G, G, G, G, G, G, G, G, F, F, F, G, W],
-      [W, G, G, G, G, G, G, G, F, F, F, W, C, G, G, G, G, G, G, F, F, F, G, W],
+      [W, G, G, G, G, G, G, G, F, F, F, W, G, G, G, C, G, G, G, F, F, F, G, W],
       [W, G, G, G, W, G, G, G, F, F, F, W, W, G, G, G, G, G, G, F, F, F, G, W],
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
       [W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W],
@@ -77,7 +113,8 @@ export class MainScreen extends Container {
     for (let row = 0; row < grid.length; row++) {
       for (let col = 0; col < grid[0].length; col++) {
         const tileType = grid[row][col];
-        const tile = new Tile(tileType, col, row);
+        const customTexture = tileType === TileType.W ? getWaterTexture(col, row, grid) : undefined;
+        const tile = new Tile(tileType, col, row, customTexture);
 
         tile.x = col * Tile.TILE_SIZE;
         tile.y = row * Tile.TILE_SIZE;

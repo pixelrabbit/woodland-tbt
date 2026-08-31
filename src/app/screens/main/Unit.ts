@@ -17,6 +17,7 @@ interface IUnit {
   moveType: "foot" | "treads" | "tires" | "air";
   moveRange: number;
   attackRange: number;
+  minAttackRange?: number;
   damage: Record<string, { primary: number; secondary: number }>;
 }
 
@@ -78,6 +79,7 @@ export const UNIT: Record<U, IUnit> = {
     moveType: "treads",
     moveRange: 5,
     attackRange: 3,
+    minAttackRange: 2,
     damage: {
       infantry: { primary: 0, secondary: 90 },
       commando: { primary: 0, secondary: 85 },
@@ -98,6 +100,7 @@ export class Unit extends Container {
   moveRange: number;
   moveType: "foot" | "treads" | "tires" | "air";
   attackRange: number = 1;
+  minAttackRange: number = 1;
   private _team: "blue" | "red" = "blue";
   public boardTiles?: Map<string, Tile>;
   public boardGrid?: Container;
@@ -119,6 +122,7 @@ export class Unit extends Container {
     this.updateHealthVisuals();
     this.updateTeamTexture();
     if (this.sprite) {
+      this.sprite.setSize(Tile.TILE_SIZE);
       this.sprite.scale.x = value === "red" ? -Math.abs(this.sprite.scale.x) : Math.abs(this.sprite.scale.x);
     }
   }
@@ -133,6 +137,7 @@ export class Unit extends Container {
     this.moveRange = UNIT[type].moveRange;
     this.moveType = UNIT[type].moveType;
     this.attackRange = UNIT[type].attackRange;
+    this.minAttackRange = UNIT[type].minAttackRange ?? 1;
     this.unitType = type;
 
     this.position.set(x, y);
@@ -188,7 +193,13 @@ export class Unit extends Container {
     if (this.boardTiles) {
       const parentTile = this.parent as Tile;
       this.boardTiles.forEach((t) => (t.state = "default"));
-      getAttackableTiles(parentTile.gridX, parentTile.gridY, this.attackRange, this.boardTiles).forEach((t) => {
+      getAttackableTiles(
+        parentTile.gridX,
+        parentTile.gridY,
+        this.attackRange,
+        this.boardTiles,
+        this.minAttackRange
+      ).forEach((t) => {
         t.state = "canAttack";
       });
     }
@@ -507,11 +518,13 @@ const infantryRedSprite = await Assets.load("assets/units/infantry-red.png");
 export class Infantry extends Unit {
   constructor(x: number, y: number) {
     super(U.Infantry, x, y, infantryBlueSprite);
+    this.sprite.setSize(Tile.TILE_SIZE);
   }
 
   public override updateTeamTexture() {
     if (this.sprite) {
       this.sprite.texture = this.team === "blue" ? infantryBlueSprite : infantryRedSprite;
+      this.sprite.setSize(Tile.TILE_SIZE);
     }
   }
 }
@@ -521,11 +534,13 @@ const commandoRedSprite = await Assets.load("assets/units/commando-red.png");
 export class Commando extends Unit {
   constructor(x: number, y: number) {
     super(U.Commando, x, y, commandoBlueSprite);
+    this.sprite.setSize(Tile.TILE_SIZE);
   }
 
   public override updateTeamTexture() {
     if (this.sprite) {
       this.sprite.texture = this.team === "blue" ? commandoBlueSprite : commandoRedSprite;
+      this.sprite.setSize(Tile.TILE_SIZE);
     }
   }
 }
@@ -535,6 +550,7 @@ export class Tank extends Unit {
   constructor(x: number, y: number) {
     // Call the parent Unit constructor, passing the tank type and texture
     super(U.tank, x, y, tankSprite);
+    this.sprite.setSize(Tile.TILE_SIZE);
   }
 }
 
@@ -542,13 +558,23 @@ const reconSprite = await Assets.load("assets/main/recon.png");
 export class Recon extends Unit {
   constructor(x: number, y: number) {
     super(U.recon, x, y, reconSprite);
-    // this.sprite.tint = 0xaaffaa; // Light green tint to differentiate it from the tank since we reused the asset
+    this.sprite.setSize(Tile.TILE_SIZE);
   }
 }
 
+const artilleryBlueSprite = await Assets.load("assets/units/artillery-blue.png");
+const artilleryRedSprite = await Assets.load("assets/units/artillery-red.png");
 const artillerySprite = await Assets.load("assets/main/artillery.png");
 export class Artillery extends Unit {
   constructor(x: number, y: number) {
     super(U.artillery, x, y, artillerySprite);
+    this.sprite.setSize(Tile.TILE_SIZE);
+  }
+
+  public override updateTeamTexture() {
+    if (this.sprite) {
+      this.sprite.texture = this.team === "blue" ? artilleryBlueSprite : artilleryRedSprite;
+      this.sprite.setSize(Tile.TILE_SIZE);
+    }
   }
 }
